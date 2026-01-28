@@ -1,0 +1,100 @@
+import { Request, Response } from "express";
+import axios from "axios";
+import { PlanModel } from "../models/planModel";
+import { Plan } from "../types/response";
+import config from "../config";
+
+// ส่ง request ไป FastAPI เพื่อ generate plans preview
+export async function generatePlans(req: Request, res: Response) {
+  try {
+    const {
+      province_id,
+      province_name,
+      start_date,
+      end_date,
+      group_type,
+      friend_count,
+      family,
+      interests,
+      activities,
+      budget_type,
+      budget_amount,
+      plan_name,
+      num_plans,
+    } = req.body;
+
+    const payload = {
+      province: province_name || province_id,
+      start_date,
+      end_date,
+      group_type,
+      friend_count,
+      family,
+      interests,
+      activities,
+      budget_type,
+      budget_amount,
+      num_plans: num_plans || 1,
+    };
+
+    console.log("generatePlans payload:", payload);
+
+    const response = await axios.post<{ plans: Plan[] }>(
+      `${config.RAG_URL}/api/plan/generate`,
+      payload,
+      {
+        headers: { "Content-Type": "application/json" },
+        timeout: 100000,
+        responseType: "json",
+      }
+    );
+
+    const result = response.data;
+    const plans = result?.plans ?? [];
+
+    return res.status(200).json({ plans });
+  } catch (err: any) {
+    console.error("Error in generatePlans:", err.message || err);
+    return res.status(500).json({ error: "Failed to preview plans",
+      message: err?.response?.data?.detail || err.message,
+     });
+  }
+}
+
+// บันทึกแผนที่เลือกลง database
+export async function savePlan(req: Request, res: Response) {
+  try {
+    const plan = req.body as Plan;
+    const saved = await PlanModel.create(plan);
+    return res.status(201).json(saved);
+  } catch (err: any) {
+    console.error("Error in savePlan:", err.message || err);
+    return res.status(500).json({ error: "Failed to save plan" });
+  }
+}
+
+// (Optional) ดึงแผนที่บันทึกไว้ทั้งหมด
+export async function getSavedPlans(req: Request, res: Response) {
+  try {
+    const plans = await PlanModel.find().sort({ createdAt: -1 }).exec();
+    return res.json({ plans });
+  } catch (err: any) {
+    console.error("Error in getSavedPlans:", err.message || err);
+    return res.status(500).json({ error: "Failed to load saved plans" });
+  }
+}
+
+// (Optional) ดึงแผนที่บันทึกแล้วตาม id
+export async function getSavedPlanById(req: Request, res: Response) {
+  try {
+    const id = req.params.planId;
+    const plan = await PlanModel.findById(id).exec();
+    if (!plan) {
+      return res.status(404).json({ error: "Plan not found" });
+    }
+    return res.json(plan);
+  } catch (err: any) {
+    console.error("Error in getSavedPlanById:", err.message || err);
+    return res.status(500).json({ error: "Failed to load plan" });
+  }
+}

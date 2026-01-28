@@ -1,0 +1,22 @@
+# node_modules สำหรับ backend
+node_modules/
+
+# build
+dist/
+build/
+
+# environment
+.env
+.env.*.local
+*.tsbuildinfo
+
+# log
+*.log
+logs/
+
+# editor
+.vscode/
+.idea/
+
+# macOS
+.DS_Store

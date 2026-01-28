@@ -1,0 +1,25 @@
+# node_modules สำหรับ frontend
+node_modules/
+
+# expo
+.expo/
+.expo-shared/
+
+# build
+web-build/
+
+# environment
+.env*
+*.tsbuildinfo
+
+# log และ debug
+*.log
+debug/
+logs/
+
+# editor
+.vscode/
+.idea/
+
+# macOS
+.DS_Store

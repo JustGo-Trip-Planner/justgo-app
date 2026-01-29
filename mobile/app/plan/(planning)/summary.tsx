@@ -6,9 +6,10 @@ import {
   TouchableOpacity,
   TextInput,
   Image,
+  ActivityIndicator,
 } from "react-native";
 import { useRouter } from "expo-router";
-import { usePlan } from "@/context/PlanContext";
+import { GeneratedPlan, usePlan } from "@/context/PlanContext";
 import { Ionicons } from "@expo/vector-icons";
 import axios from "axios";
 import Constants from "expo-constants";
@@ -32,6 +33,8 @@ export default function SummaryPage() {
 
 const createPlan = async () => {
   try {
+    router.push("/plan/(preview)/loading");
+
     const API_URL = Constants.expoConfig?.extra?.API_URL;
     const res = await axios.post(`${API_URL}/api/plan/generate`, {
       province_id: plan.province,
@@ -48,14 +51,21 @@ const createPlan = async () => {
       num_plans: numPlans,
     });
 
-    const data = res.data.plans;
+    const data = res.data.plans.map((p: GeneratedPlan) => ({
+      ...p,
+      previewImage: plan.image, 
+    }));
     setPlans(data);
 
     console.log("Generated plans:", data);
     
-    router.push("/plan/result");
+    router.replace("/plan/result");
   } catch (error) {
     console.error("Error generating plans:", error);
+    router.back();
+    setTimeout(() => {
+      alert("เกิดข้อผิดพลาดในการสร้างแผนการเดินทาง กรุณาลองใหม่อีกครั้ง");
+    }, 500);
   }
 };
 
@@ -89,6 +99,7 @@ const createPlan = async () => {
   };
 
   return (
+    
     <View className="flex-1 bg-white">
       {/* Header */}
       <View className="flex-row items-center px-4 pt-6 pb-4 space-x-2">

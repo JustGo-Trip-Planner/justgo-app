@@ -1,101 +1,97 @@
-import { ScrollView, View, Text, Image, TouchableOpacity } from "react-native";
+import { View, Text, ScrollView, TouchableOpacity, Image, ImageBackground } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import Constants from "expo-constants";
+import { useRouter } from "expo-router";
+import { useEffect, useState } from "react";
+import axios from "axios";
+import type { Plan } from "@/types/response";
+import PlanCard from "@/components/home/PlanCard";
 
 export default function MyTrip() {
-  const trips = [
-    {
-      title: "กรุงเทพกับครอบครัว #1",
-      placesCount: 5,
-      hotelStars: 4,
-      participants: "ครอบครัว",
-      date: "12 – 14 ธันวาคม 2025",
-      cost: 7900,
-      image: require("@/assets/images/bangkok.jpg"),
-    },
-    {
-      title: "เดทเชียงใหม่ #3",
-      placesCount: 6,
-      hotelStars: 3,
-      participants: "คู่รัก",
-      date: "25 – 27 ตุลาคม 2025",
-      cost: 4500,
-      image: require("@/assets/images/chiangmai.jpg"),
-    },
-  ];
+  const [plans, setPlans] = useState<Plan[]>([]);
+  const router = useRouter();
+  const API_URL = Constants.expoConfig?.extra?.API_URL;
+
+  useEffect(() => {
+    const fetchPlans = async () => {
+      try {
+        const res = await axios.get(`${API_URL}/api/plan`);
+        setPlans(res.data || []);
+      } catch (err) {
+        console.error("❌ Fetch failed:", err);
+      }
+    };
+    fetchPlans();
+  }, []);
+
+  const EmptyState = () => (
+    <View className="bg-white/80 rounded-2xl shadow-md p-12 items-center justify-center px-6 h-full">
+      <Ionicons name="map-outline" size={72} color="#cbd5e1" />
+      <Text className="text-xl font-semibold text-gray-700 mt-4 mb-2">
+        ยังไม่มีแผนของคุณ
+      </Text>
+      <Text className="text-gray-500 text-center font-sans mb-6">
+        เริ่มสร้างแผนการเดินทางเพื่อบันทึกทริปแรกของคุณ
+      </Text>
+      <TouchableOpacity
+        onPress={() => router.push("/")}
+        className="bg-orange-500 px-6 py-3 rounded-full flex-row items-center"
+      >
+        <Ionicons name="add-circle-outline" size={20} color="#fff" />
+        <Text className="text-white text-base font-medium ml-2">
+          สร้างแผนการเดินทางของคุณ
+        </Text>
+      </TouchableOpacity>
+    </View>
+  );
 
   return (
-    <ScrollView contentContainerStyle={{ padding: 20 }} className="pt-14">
-      <View className="items-center mb-6">
-        <Image
-          source={require("@/assets/icons/logo.png")}
-          className="h-10 w-32"
-          resizeMode="contain"
-        />
-        <TouchableOpacity className="absolute top-1 right-0">
-          <Ionicons name="notifications-outline" size={28} color="#333" />
-        </TouchableOpacity>
-      </View>
+    <ImageBackground
+      source={require("@/assets/backgrounds/bg.png")}
+      resizeMode="cover"
+      className="flex-1"
+    >
+      <View className="flex-1 bg-white/20 backdrop-blur-md">
+        <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 100 }} className="pt-14">
 
-      <Text className="text-3xl font-semibold text-blue-800 mb-1 text-center">
-        แผนการเดินทางของฉัน
-      </Text>
-      <Text className="text-lg text-blue-800 mb-6 text-center">
-        รวบรวมทุกการเดินทางของคุณไว้ในที่เดียว
-      </Text>
-
-      <View className="flex-row justify-center mb-6">
-        <TouchableOpacity className="px-4 py-2 bg-orange-400 rounded-full mr-2">
-          <Text className="text-sm text-white">แผนเดินทางของคุณ</Text>
-        </TouchableOpacity>
-        <TouchableOpacity className="px-4 py-2 bg-white rounded-full border border-gray-300">
-          <Text className="text-sm text-gray-700">ประวัติแผนการเดินทาง</Text>
-        </TouchableOpacity>
-      </View>
-
-      {trips.map((trip, idx) => (
-        <TouchableOpacity
-          key={idx}
-          className="mb-6 bg-white rounded-2xl shadow-md overflow-hidden"
-        >
-          <Image
-            source={trip.image}
-            className="w-full h-36"
-            resizeMode="cover"
-          />
-          <View className="p-4">
-            <Text className="text-xl font-semibold text-gray-800 mb-1">
-              {trip.title}
-            </Text>
-
-            <View className="flex-row items-center mb-2">
-              <Ionicons name="location-outline" size={16} color="#0ea5e9" />
-              <Text className="text-sm text-gray-600 ml-1">
-                {trip.placesCount} สถานที่
-              </Text>
-              <View className="mx-2 w-1 h-1 bg-gray-400 rounded-full" />
-              <Ionicons name="bed-outline" size={16} color="#0ea5e9" />
-              <Text className="text-sm text-gray-600 ml-1">
-                {trip.hotelStars} ดาว
-              </Text>
-            </View>
-
-            <View className="flex-row items-center mb-2">
-              <Text className="text-sm text-gray-600">
-                ผู้ร่วมเดินทาง: {trip.participants}
-              </Text>
-            </View>
-
-            <View className="flex-row items-center mb-3">
-              <Text className="text-sm text-gray-600">วันที่เดินทาง: </Text>
-              <Text className="text-sm text-gray-700 ml-1">{trip.date}</Text>
-            </View>
-
-            <Text className="text-base text-gray-800">
-              ค่าใช้จ่ายทั้งทริปโดยประมาณ ~฿{trip.cost}
-            </Text>
+          {/* Header */}
+          <View className="items-center mb-6">
+            <Image
+              source={require("@/assets/icons/logo.png")}
+              className="h-10 w-32"
+              resizeMode="contain"
+            />
+            <TouchableOpacity className="absolute top-1 right-0">
+              <Ionicons name="notifications-outline" size={28} color="#333" />
+            </TouchableOpacity>
           </View>
-        </TouchableOpacity>
-      ))}
-    </ScrollView>
+
+          {/* Title */}
+          <Text className="text-2xl text-blue-800 font-semibold text-center mb-1">
+            แผนการเดินทางของฉัน
+          </Text>
+          <Text className="text-base text-blue-800 font-sans text-center mb-6">
+            รวมทุกการเดินทางของคุณไว้ในที่เดียว
+          </Text>
+
+          {/* Tabs */}
+          <View className="flex-row justify-center mb-6">
+            <TouchableOpacity className="px-4 py-2 bg-orange-400 rounded-full mr-2">
+              <Text className="text-sm text-white font-sans">แผนเดินทางของคุณ</Text>
+            </TouchableOpacity>
+            <TouchableOpacity className="px-4 py-2 bg-white rounded-full border border-gray-300">
+              <Text className="text-sm text-gray-700 font-sans">ประวัติแผนการเดินทาง</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Content */}
+          {plans.length === 0 ? (
+            <EmptyState />
+          ) : (
+            plans.map((plan, idx) => <PlanCard key={idx} plan={plan} />)
+          )}
+        </ScrollView>
+      </View>
+    </ImageBackground>
   );
 }

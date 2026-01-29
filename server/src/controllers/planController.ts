@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import axios from "axios";
-import { PlanModel } from "../models/planModel";
+import PlanModel from "../models/planModel";
 import { Plan } from "../types/response";
 import config from "../config";
 
@@ -64,8 +64,8 @@ export async function generatePlans(req: Request, res: Response) {
 // บันทึกแผนที่เลือกลง database
 export async function savePlan(req: Request, res: Response) {
   try {
-    const plan = req.body as Plan;
-    const saved = await PlanModel.create(plan);
+    const newPlan = new PlanModel(req.body);
+    const saved = await newPlan.save();
     return res.status(201).json(saved);
   } catch (err: any) {
     console.error("Error in savePlan:", err.message || err);
@@ -76,8 +76,8 @@ export async function savePlan(req: Request, res: Response) {
 // (Optional) ดึงแผนที่บันทึกไว้ทั้งหมด
 export async function getSavedPlans(req: Request, res: Response) {
   try {
-    const plans = await PlanModel.find().sort({ createdAt: -1 }).exec();
-    return res.json({ plans });
+    const plans = await PlanModel.find().sort({ createdAt: -1 });
+    res.json(plans);
   } catch (err: any) {
     console.error("Error in getSavedPlans:", err.message || err);
     return res.status(500).json({ error: "Failed to load saved plans" });

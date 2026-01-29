@@ -18,7 +18,7 @@ import { useSelectedPlan } from "@/context/PlanContext";
 import OverviewTab from "@/components/plan/OverviewTab";
 import ItineraryTab from "@/components/plan/ItineraryTab";
 import BudgetTab from "@/components/plan/BudgetTab";
-import SelectButton from "@/components/plan/SelectButton";
+// import EditPlan from "@/components/plan/";
 
 const { height: SCREEN_H } = Dimensions.get("window");
 
@@ -200,7 +200,7 @@ export default function PlanDetailPage() {
         </ScrollView>
         
       </Animated.View>
-        <SelectButton planId={id} />
+        {/* <EditPlan planId={id} /> */}
     </View>
   );
 }

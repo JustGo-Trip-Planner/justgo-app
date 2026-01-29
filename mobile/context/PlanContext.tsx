@@ -34,12 +34,13 @@ export type GeneratedPlan = {
   end_date: string;
   total_budget: number;
   total_places: number;
-
+  
   recommended_hotels?: Array<{
     name: string;
     stars?: number;
     image?: string;
   }>;
+  previewImage?: string;
 
   // optional
   daily_itinerary?: any[];

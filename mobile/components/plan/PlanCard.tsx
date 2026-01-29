@@ -36,7 +36,7 @@ export default function PlanCard({ plan, onPress, onSelect }: PlanCardProps) {
   return (
     <View className="bg-white rounded-2xl shadow-sm mb-4 overflow-hidden border border-gray-300">
       <Image
-        source={{ uri: previewImage || "https://via.placeholder.com/300x200" }}
+        source={{ uri: previewImage }}
         className="w-full h-40"
         resizeMode="cover"
       />

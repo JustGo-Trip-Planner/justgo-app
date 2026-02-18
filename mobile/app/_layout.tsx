@@ -1,4 +1,4 @@
-import { Stack, Redirect, useRouter, useSegments } from "expo-router";
+import { Stack, Redirect, useSegments } from "expo-router";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import {
   useFonts,
@@ -61,14 +61,12 @@ export default function RootLayout() {
         <AuthProvider>
           <PlanProvider>
             <SafeAreaView style={{ flex: 1 }} edges={["bottom"]}>
-              {/* 🔁 Routes with dynamic redirect */}
               <Stack screenOptions={{ headerShown: false }}>
                 <Stack.Screen name="(auth)" />
                 <Stack.Screen name="(home)" />
                 <Stack.Screen name="detail_province/[province]" />
               </Stack>
 
-              {/* 🔁 Initial Redirect Logic */}
               <InitialRedirect />
             </SafeAreaView>
           </PlanProvider>

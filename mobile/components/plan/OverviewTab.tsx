@@ -1,9 +1,14 @@
-import { View, Text, Image } from "react-native";
+import { View, Text, Image, Pressable } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { format, parseISO } from "date-fns";
 import { th } from "date-fns/locale";
 
-export default function OverviewTab({ plan }: { plan: any }) {
+type Props = {
+  plan: any;
+};
+
+
+export default function OverviewTab({ plan }: Props) {
   const formatDateRange = (start: string, end: string) => {
     try {
       const startDate = parseISO(start);

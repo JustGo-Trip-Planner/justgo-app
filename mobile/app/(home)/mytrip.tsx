@@ -88,7 +88,14 @@ export default function MyTrip() {
           {plans.length === 0 ? (
             <EmptyState />
           ) : (
-            plans.map((plan, idx) => <PlanCard key={idx} plan={plan} />)
+            plans.map((plan) => (
+              <PlanCard
+                key={plan._id}
+                plan={plan}
+                onPress={() => router.push(`/trip/${plan._id}`)}
+                editable={false}
+              />
+            ))
           )}
         </ScrollView>
       </View>

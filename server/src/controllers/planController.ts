@@ -87,8 +87,9 @@ export async function getSavedPlans(req: Request, res: Response) {
 // (Optional) ดึงแผนที่บันทึกแล้วตาม id
 export async function getSavedPlanById(req: Request, res: Response) {
   try {
-    const id = req.params.planId;
+    const { id } = req.params;
     const plan = await PlanModel.findById(id).exec();
+    
     if (!plan) {
       return res.status(404).json({ error: "Plan not found" });
     }
@@ -98,3 +99,24 @@ export async function getSavedPlanById(req: Request, res: Response) {
     return res.status(500).json({ error: "Failed to load plan" });
   }
 }
+
+// PUT: Update plan by ID
+export const updatePlanById = async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const updatedData = req.body;
+
+  try {
+    const updatedPlan = await PlanModel.findByIdAndUpdate(id, updatedData, {
+      new: true,
+      runValidators: true,
+    });
+
+    if (!updatedPlan) {
+      return res.status(404).json({ message: "Plan not found" });
+    }
+
+    res.json({ success: true, data: updatedPlan });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Update failed", error });
+  }
+};

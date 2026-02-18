@@ -15,7 +15,11 @@ type Activity = {
   lng?: number;
 };
 
-export default function ItineraryTab({ plan }: { plan: any }) {
+type Props = {
+  plan: any;
+};
+
+export default function ItineraryTab({ plan }: Props) {
   const [day, setDay] = useState(0);
   const [polylinePoints, setPolylinePoints] = useState<{ latitude: number; longitude: number }[]>([]);
   const days = plan.daily_itinerary || [];
@@ -153,19 +157,6 @@ export default function ItineraryTab({ plan }: { plan: any }) {
               <Text className="ml-1 text-blue-600 font-sans font-semibold text-sm">ดูเส้นทาง</Text>
             </Pressable>
           </View>
-        </View>
-
-        {/* CTA open route */}
-        <View className="absolute right-3 bottom-3">
-          <Pressable
-            onPress={openGoogleMapsRoute}
-            className="flex-row items-center bg-white/95 border border-gray-200 px-3 py-2 rounded-full"
-          >
-            <Ionicons name="navigate-outline" size={16} color="#2563EB" />
-            <Text className="ml-1 text-sm font-sans font-semibold text-blue-600">
-              ดูเส้นทาง
-            </Text>
-          </Pressable>
         </View>
 
       {/* Activities list (timeline style) */}

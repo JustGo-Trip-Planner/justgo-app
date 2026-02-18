@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   View,
   Text,
@@ -13,12 +13,12 @@ import {
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useSelectedPlan } from "@/context/PlanContext";
 
 import OverviewTab from "@/components/plan/OverviewTab";
 import ItineraryTab from "@/components/plan/ItineraryTab";
 import BudgetTab from "@/components/plan/BudgetTab";
-// import EditPlan from "@/components/plan/";
+import axios from "axios";
+import Constants from "expo-constants";
 
 const { height: SCREEN_H } = Dimensions.get("window");
 
@@ -28,16 +28,32 @@ const EXPANDED_TOP = 100;
 
 const TABS = ["ภาพรวม", "แผนเที่ยว", "งบประมาณ"] as const;
 
-export default function PlanDetailPage() {
+export default function TripViewPlan() {
+  const [plan, setPlan] = useState<any>(null);
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  const plan = useSelectedPlan(id);
+  const API_URL = Constants.expoConfig?.extra?.API_URL;
 
   const [activeTab, setActiveTab] = useState(0);
   const buttonVisible = useRef(new Animated.Value(0)).current;
-
   const topAnim = useRef(new Animated.Value(COLLAPSED_TOP)).current;
   const lastTop = useRef(COLLAPSED_TOP);
+
+  useEffect(() => {
+    if (id) {
+      axios.get(`${API_URL}/api/plan/${id}`).then((res) => {
+        setPlan(res.data);
+      });
+    }
+  }, [id]);
+
+  const handleSave = async () => {
+    try {
+        await axios.put(`${API_URL}/api/plan/${plan._id}`, plan);
+        console.log("✅ Plan updated successfully");
+    } catch (err) {
+        console.error("❌ Update failed:", err);}
+  };
 
   const snapTo = (to: number) => {
     Animated.spring(topAnim, {
@@ -117,21 +133,23 @@ export default function PlanDetailPage() {
         />
 
         {/* Top Bar */}
-        <View className="absolute top-6 left-4 right-4 flex-row items-center">
+        <View className="absolute top-12 left-4 right-4 flex-row items-center justify-between">
           <Pressable
             onPress={() => router.back()}
-            className="w-12 h-12 rounded-full bg-white/25 items-center justify-center"
+            className="w-11 h-11 rounded-full bg-white/25 items-center justify-center"
           >
-            <Ionicons name="chevron-back" size={26} color="#fff" />
+            <Ionicons name="chevron-back" size={24} color="#fff" />
           </Pressable>
 
-          <Text
-            numberOfLines={1}
-            className="ml-6 text-white text-2xl font-medium"
+          <Pressable
+            onPress={() => router.push(`/trip/${id}/edit`)}
+            className="px-5 py-4 rounded-2xl bg-white/25 shadow-lg flex-row items-center"
           >
-            รายละเอียด
-          </Text>
+            <Ionicons name="ellipsis-vertical" size={20} color="#fff" />
+            <Text className="text-white font-semibold ml-2">แก้ไขแผน</Text>
+          </Pressable>
         </View>
+
       </View>
 
       {/* ================= Draggable Sheet ================= */}
@@ -200,7 +218,6 @@ export default function PlanDetailPage() {
         </ScrollView>
         
       </Animated.View>
-        {/* <EditPlan planId={id} /> */}
     </View>
   );
 }

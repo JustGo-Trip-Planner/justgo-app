@@ -1,8 +1,12 @@
-import { View, Text, TouchableOpacity, Animated } from "react-native";
+import { View, Text, TouchableOpacity, Animated, Pressable } from "react-native";
 import { useEffect, useRef, useState } from "react";
 import { Ionicons } from "@expo/vector-icons";
 
-export default function BudgetTab({ plan }: { plan: any }) {
+type Props = {
+  plan: any;
+};
+
+export default function BudgetTab({ plan }: Props) {
   const [activeDay, setActiveDay] = useState(0);
   const animatedWidths = useRef(
     plan ? plan.total_expense_breakdown &&

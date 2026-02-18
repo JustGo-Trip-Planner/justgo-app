@@ -5,6 +5,7 @@ import type { Plan } from "@/types/response";
 
 type Props = {
   plan: Plan;
+  onPress?: () => void;
   editable?: boolean;
 };
 
@@ -31,12 +32,12 @@ function formatThaiDateRange(start: string, end: string) {
   return `${startDay} ${startMonth} ${startYear} - ${endDay} ${endMonth} ${endYear}`;
 }
 
-export default function PlanCard({ plan }: Props) {
+export default function PlanCard({ plan, onPress }: Props) {
   const router = useRouter();
 
   return (
     <TouchableOpacity
-      onPress={() => router.push(`/trip/${plan._id}`)}
+      onPress={onPress}
       className="bg-white/90 rounded-2xl overflow-hidden mb-4 w-full"
       style={{
         shadowColor: "#000",

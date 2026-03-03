@@ -3,6 +3,7 @@ import axios from "axios";
 import PlanModel from "../models/planModel";
 import { Plan } from "../types/response";
 import config from "../config";
+import { AuthRequest } from "../middlewares/auth";
 
 // ส่ง request ไป FastAPI เพื่อ generate plans preview
 export async function generatePlans(req: Request, res: Response) {
@@ -62,9 +63,18 @@ export async function generatePlans(req: Request, res: Response) {
 }
 
 // บันทึกแผนที่เลือกลง database
-export async function savePlan(req: Request, res: Response) {
+export async function savePlan(req: AuthRequest, res: Response) {
   try {
-    const newPlan = new PlanModel(req.body);
+    if (!req.userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    const fullPlan = req.body;
+    const newPlan = new PlanModel({
+      ...fullPlan,
+      user: req.userId,
+    });
+
     const saved = await newPlan.save();
     return res.status(201).json(saved);
   } catch (err: any) {
@@ -73,11 +83,15 @@ export async function savePlan(req: Request, res: Response) {
   }
 }
 
-// (Optional) ดึงแผนที่บันทึกไว้ทั้งหมด
-export async function getSavedPlans(req: Request, res: Response) {
+// ดึงแผนที่บันทึกไว้ทั้งหมดของ user ตัวเอง
+export async function getSavedPlans(req: AuthRequest, res: Response) {
   try {
-    const plans = await PlanModel.find().sort({ createdAt: -1 });
-    res.json(plans);
+    if (!req.userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    const plans = await PlanModel.find({ user: req.userId }).sort({ createdAt: -1 });
+    return res.json(plans);
   } catch (err: any) {
     console.error("Error in getSavedPlans:", err.message || err);
     return res.status(500).json({ error: "Failed to load saved plans" });

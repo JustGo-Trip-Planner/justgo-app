@@ -1,28 +1,46 @@
-import { View, Text, ScrollView, TouchableOpacity, Image, ImageBackground } from "react-native";
+import { View, Text, ScrollView, TouchableOpacity, Image, ImageBackground, ActivityIndicator } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import Constants from "expo-constants";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import axios from "axios";
 import type { Plan } from "@/types/response";
 import PlanCard from "@/components/home/PlanCard";
+import { useAuth } from "@/context/AuthContext";
+import HomeScroll from "@/components/layout/HomeScroll";
 
 export default function MyTrip() {
   const [plans, setPlans] = useState<Plan[]>([]);
+  const [loadingPlans, setLoadingPlans] = useState(false);
+
   const router = useRouter();
-  const API_URL = Constants.expoConfig?.extra?.API_URL;
+  const { token, loading } = useAuth();
 
   useEffect(() => {
+    if (loading) return;
+
+    if (!token) {
+      setPlans([]);
+      return;
+    }
+
     const fetchPlans = async () => {
       try {
-        const res = await axios.get(`${API_URL}/api/plan`);
-        setPlans(res.data || []);
-      } catch (err) {
-        console.error("❌ Fetch failed:", err);
+        setLoadingPlans(true);
+        const res = await axios.get("/api/plan");
+        const data = Array.isArray(res.data) ? res.data : [];
+        setPlans(data);
+      } catch (err: any) {
+        if (err?.response?.status !== 401) {
+          console.error("❌ Fetch failed:", err);
+        }
+        setPlans([]);
+      } finally {
+        setLoadingPlans(false);
       }
     };
+
     fetchPlans();
-  }, []);
+  }, [loading, token]);
 
   const EmptyState = () => (
     <View className="bg-white/80 rounded-2xl shadow-md p-12 items-center justify-center px-6 h-full">
@@ -52,19 +70,7 @@ export default function MyTrip() {
       className="flex-1"
     >
       <View className="flex-1 bg-white/20 backdrop-blur-md">
-        <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 100 }} className="pt-14">
-
-          {/* Header */}
-          <View className="items-center mb-6">
-            <Image
-              source={require("@/assets/icons/logo.png")}
-              className="h-10 w-32"
-              resizeMode="contain"
-            />
-            <TouchableOpacity className="absolute top-1 right-0">
-              <Ionicons name="notifications-outline" size={28} color="#333" />
-            </TouchableOpacity>
-          </View>
+        <HomeScroll contentPaddingBottom={80}>
 
           {/* Title */}
           <Text className="text-2xl text-blue-800 font-semibold text-center mb-1">
@@ -85,7 +91,12 @@ export default function MyTrip() {
           </View>
 
           {/* Content */}
-          {plans.length === 0 ? (
+          {loadingPlans ? (
+            <View className="items-center justify-center py-10">
+              <ActivityIndicator size="large" />
+              <Text className="text-gray-600 mt-3">กำลังโหลดแผนของคุณ...</Text>
+            </View>
+          ) : plans.length === 0 ? (
             <EmptyState />
           ) : (
             plans.map((plan) => (
@@ -97,7 +108,7 @@ export default function MyTrip() {
               />
             ))
           )}
-        </ScrollView>
+        </HomeScroll>
       </View>
     </ImageBackground>
   );

@@ -6,13 +6,17 @@ import {
   getSavedPlanById,
   updatePlanById,
 } from "../controllers/planController";
+import { verifyToken } from "../middlewares/auth";
 
 const router = Router();
 
-router.get("/", getSavedPlans);
+// public
 router.post("/generate", generatePlans);
-router.post("/save", savePlan);
-router.get("/:id", getSavedPlanById);
-router.put("/:id", updatePlanById);
+
+// protected routes
+router.get("/", verifyToken, getSavedPlans);
+router.post("/save", verifyToken, savePlan);
+router.get("/:id", verifyToken, getSavedPlanById);
+router.put("/:id", verifyToken, updatePlanById);
 
 export default router;

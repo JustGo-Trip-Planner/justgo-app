@@ -114,6 +114,14 @@ export async function getSavedPlanById(req: Request, res: Response) {
   }
 }
 
+// GET: get submitted plans in group
+export const getMyPlans = async (req: AuthRequest, res: Response) => {
+  if (!req.userId) return res.status(401).json({ message: "Unauthorized" });
+
+  const plans = await PlanModel.find({ user: req.userId }).sort({ createdAt: -1 });
+  res.json(plans);
+};
+
 // PUT: Update plan by ID
 export const updatePlanById = async (req: Request, res: Response) => {
   const { id } = req.params;

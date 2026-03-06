@@ -13,6 +13,7 @@ import { useRouter, useFocusEffect } from "expo-router";
 import axios from "axios";
 
 import GroupCard, { Group } from "@/components/share/GroupCard";
+import PlanCard from "@/components/share/PlanCard";
 import HomeScroll from "@/components/layout/HomeScroll";
 import { useGroups } from "@/context/GroupContext";
 import { useAuth } from "@/context/AuthContext";
@@ -46,6 +47,14 @@ export default function ShareScreen() {
     ]);
   };
 
+  const finalizedPlans = groups
+    .filter((g: any) => g.finalizedPlanId)
+    .map((g: any) => ({
+      ...g.finalizedPlanId,
+      groupName: g.name,
+      members: g.members
+    }));
+
   return (
     <ImageBackground
       source={require("@/assets/backgrounds/bg.png")}
@@ -64,6 +73,7 @@ export default function ShareScreen() {
 
           {/* Glass Wrapper */}
           <View className="bg-white/80 rounded-3xl p-5 shadow-lg">
+
             {/* Group Section */}
             <View className="flex-row justify-between items-center mb-4">
               <Text className="text-xl font-semibold text-gray-800">
@@ -104,6 +114,31 @@ export default function ShareScreen() {
                 ))}
               </ScrollView>
             )}
+
+            {/* SHARE PLANS */}
+            <View className="mt-6">
+              <Text className="text-xl font-semibold text-gray-800 mb-3">
+                แชร์แผนการเดินทาง
+              </Text>
+
+              {finalizedPlans.length === 0 ? (
+                <Text className="text-gray-500 text-center py-6">
+                  ยังไม่มีแผนที่แชร์
+                </Text>
+              ) : (
+                finalizedPlans.map((plan) => (
+                  <PlanCard
+                    key={plan._id}
+                    plan={plan}
+                    groupName={plan.groupName}
+                    members={plan.members}
+                    onPress={() =>
+                      router.push(`/trip/${plan._id}?viewOnly=true`)
+                    }
+                  />
+                ))
+              )}
+            </View>
           </View>
         </HomeScroll>
       </View>

@@ -5,6 +5,7 @@ import {
   getSavedPlans,
   getSavedPlanById,
   updatePlanById,
+  getMyPlans,
 } from "../controllers/planController";
 import { verifyToken } from "../middlewares/auth";
 
@@ -15,6 +16,7 @@ router.post("/generate", generatePlans);
 
 // protected routes
 router.get("/", verifyToken, getSavedPlans);
+router.get("/me", verifyToken, getMyPlans);
 router.post("/save", verifyToken, savePlan);
 router.get("/:id", verifyToken, getSavedPlanById);
 router.put("/:id", verifyToken, updatePlanById);

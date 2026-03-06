@@ -10,6 +10,7 @@ import userRoutes from './routes/userRoutes';
 import groupRoutes from "./routes/groupRoutes";
 import uploadRoutes from './routes/upload';
 import notificationRoutes from "./routes/notificationRoutes";
+import voteRoutes from "./routes/voteRoutes";
 
 const app = express();
 app.use(cors());
@@ -24,6 +25,7 @@ app.use("/api/uploads", uploadRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/groups", groupRoutes);
+app.use("/api/groups", voteRoutes);
 app.use("/api/provinces", provinceRoutes);
 app.use("/api/plan", planRoutes);
 app.use("/api/notifications", notificationRoutes);

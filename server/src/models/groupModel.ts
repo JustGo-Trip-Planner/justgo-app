@@ -17,9 +17,18 @@ const GroupSchema = new mongoose.Schema(
     name: { type: String, required: true },
     owner: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
     members: [GroupMemberSchema],
+
+    votingDeadline: { type: Date, default: null }, // ตั้งจาก create group modal
+    votingClosed: { type: Boolean, default: false },
+    votingClosedReason: { type: String, enum: ["deadline", "all_voted", null], default: null },
+
+    finalizedPlanId: { type: mongoose.Schema.Types.ObjectId, ref: "Plan", default: null },
+    finalizedAt: { type: Date, default: null },
+
     createdAt: { type: Date, default: Date.now },
   }
 );
+
 
 const GroupModel = mongoose.model("Group", GroupSchema);
 export default GroupModel;

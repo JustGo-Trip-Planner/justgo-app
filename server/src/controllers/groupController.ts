@@ -1,4 +1,5 @@
-import { Request, Response } from "express";
+import { Response } from "express";
+import mongoose from "mongoose";
 import GroupModel from "../models/groupModel";
 import { AuthRequest } from "../middlewares/auth";
 import NotificationModel from "../models/notificationModel";
@@ -7,10 +8,19 @@ export const createGroup = async (req: AuthRequest, res: Response) => {
   try {
     if (!req.userId) return res.status(401).json({ message: "Unauthorized" });
 
-    const { name, members = [] } = req.body;
+    const { name, members = [], votingDeadline } = req.body;
 
     if (!name?.trim()) {
       return res.status(400).json({ message: "Group name is required" });
+    }
+
+    if (!votingDeadline) {
+      return res.status(400).json({ message: "votingDeadline is required" });
+    }
+
+    const vd = new Date(votingDeadline);
+    if (isNaN(vd.getTime()) || vd.getTime() <= Date.now()) {
+      return res.status(400).json({ message: "Invalid votingDeadline" });
     }
 
     // check duplicate members
@@ -34,6 +44,7 @@ export const createGroup = async (req: AuthRequest, res: Response) => {
       name: name.trim(),
       owner: req.userId,
       members: pendingMembers,
+      votingDeadline: vd,
     });
 
     // notify all pending members
@@ -66,7 +77,9 @@ export const getMyGroups = async (req: AuthRequest, res: Response) => {
         { owner: uid },
         { members: { $elemMatch: { userId: uid, status: "accepted" } } },
       ],
-    }).sort({ createdAt: -1 });
+    })
+    .populate("finalizedPlanId")
+    .sort({ createdAt: -1 });
 
     res.json(groups);
   } catch (error) {
@@ -82,7 +95,8 @@ export const getGroupById = async (req: AuthRequest, res: Response) => {
 
     const group = await GroupModel.findById(id)
       .populate("owner", "first_name avatar")
-      .populate("members.userId", "first_name avatar");
+      .populate("members.userId", "first_name avatar")
+      .populate("finalizedPlanId");
 
     if (!group) {
       return res.status(404).json({ message: "Group not found" });
@@ -94,6 +108,112 @@ export const getGroupById = async (req: AuthRequest, res: Response) => {
   }
 };
 
+// POST /api/groups/:groupId/invite
+export const inviteMember = async (req: AuthRequest, res: Response) => {
+  try {
+    if (!req.userId) return res.status(401).json({ message: "Unauthorized" });
+
+    const { groupId } = req.params;
+    const { userId, name, avatar } = req.body;
+
+    const group = await GroupModel.findById(groupId);
+    if (!group) return res.status(404).json({ message: "Group not found" });
+
+    if (String(group.owner) !== String(req.userId)) {
+      return res.status(403).json({ message: "Only owner can invite" });
+    }
+
+    const exists = group.members.find(
+      (m: any) => String(m.userId) === String(userId)
+    );
+
+    if (exists) {
+      return res.status(400).json({ message: "User already in group or invited" });
+    }
+
+    // add to group members
+    group.members.push({
+      userId: new mongoose.Types.ObjectId(userId),
+      name,
+      avatar: avatar ?? "",
+      status: "pending",
+      invitedAt: new Date(),
+    });
+    await group.save();
+
+    // create notification for invited user
+    await NotificationModel.create({
+      userId,
+      fromUserId: req.userId,
+      type: "group_invite",
+      groupId: group._id,
+      status: "unread",
+      createdAt: new Date(),
+    });
+
+    return res.json({ success: true });
+  } catch (error) {
+    return res.status(500).json({ message: "Invite member failed", error });
+  }
+};
+
+// DELETE /api/groups/:groupId/invite/:userId
+export const removeInviteMember = async (req: AuthRequest, res: Response) => {
+  try {
+
+    if (!req.userId)
+      return res.status(401).json({ message: "Unauthorized" });
+
+    const { groupId, userId } = req.params;
+
+    const uid = Array.isArray(userId) ? userId[0] : userId;
+
+    const group = await GroupModel.findById(groupId);
+
+    if (!group)
+      return res.status(404).json({ message: "Group not found" });
+
+    if (String(group.owner) !== String(req.userId))
+      return res.status(403).json({ message: "Only owner can remove invite" });
+
+    // 🔥 ลบ member โดยตรง
+    const result = await GroupModel.updateOne(
+      {
+        _id: groupId,
+        "members.userId": uid
+      },
+      {
+        $pull: {
+          members: { userId: uid }
+        }
+      }
+    );
+
+    if (result.modifiedCount === 0) {
+      return res.status(404).json({ message: "Invite not found" });
+    }
+
+    await NotificationModel.deleteMany({
+      userId: uid,
+      groupId,
+      type: "group_invite"
+    });
+
+    return res.json({ success: true });
+
+  } catch (error) {
+
+    console.log("removeInvite error", error);
+
+    return res.status(500).json({
+      message: "Remove invite failed",
+      error
+    });
+
+  }
+};
+
+// POST /api/groups/:groupId/respond
 export const respondInvite = async (req: AuthRequest, res: Response) => {
   try {
     if (!req.userId) return res.status(401).json({ message: "Unauthorized" });

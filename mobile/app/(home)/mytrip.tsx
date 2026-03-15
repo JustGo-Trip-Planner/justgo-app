@@ -73,10 +73,10 @@ export default function MyTrip() {
         <HomeScroll contentPaddingBottom={80}>
 
           {/* Title */}
-          <Text className="text-2xl text-blue-800 font-semibold text-center mb-1">
+          <Text className="text-2xl text-sky-700 font-semibold text-center mb-1">
             แผนการเดินทางของฉัน
           </Text>
-          <Text className="text-base text-blue-800 font-sans text-center mb-6">
+          <Text className="text-lg text-sky-700 font-sans text-center mb-6">
             รวมทุกการเดินทางของคุณไว้ในที่เดียว
           </Text>
 

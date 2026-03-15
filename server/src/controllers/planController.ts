@@ -102,7 +102,7 @@ export async function getSavedPlans(req: AuthRequest, res: Response) {
 export async function getSavedPlanById(req: Request, res: Response) {
   try {
     const { id } = req.params;
-    const plan = await PlanModel.findById(id).exec();
+    const plan = await PlanModel.findById(id).populate("user", "first_name avatar").exec();
     
     if (!plan) {
       return res.status(404).json({ error: "Plan not found" });

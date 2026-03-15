@@ -15,7 +15,8 @@ import axios from "axios";
 import Constants from "expo-constants";
 
 export type Member = {
-  userId: string
+  userId:
+    | string
     | {
         _id: string;
         first_name?: string;
@@ -88,7 +89,7 @@ export default function GroupMembersSection({
   }, [localMembers]);
 
   const filteredResults = useMemo(() => {
-    return results.filter((u) => !memberIdSet.has(String(u._id)));
+    return results.filter((u) => !memberIdSet.has(u._id));
   }, [results, memberIdSet]);
 
   const updateMembers = (next: Member[]) => {
@@ -115,7 +116,7 @@ export default function GroupMembersSection({
       );
 
       if (requestId === requestIdRef.current) {
-        setResults(Array.isArray(res.data) ? res.data : []);
+        setResults(res.data ?? []);
       }
     } catch (err) {
       console.log("search error", err);
@@ -125,13 +126,12 @@ export default function GroupMembersSection({
   };
 
   useEffect(() => {
-    const delay = setTimeout(() => searchUsers(search), 300);
-    return () => clearTimeout(delay);
+    const timer = setTimeout(() => searchUsers(search), 300);
+    return () => clearTimeout(timer);
   }, [search]);
 
   const inviteUser = async (user: SearchUser) => {
     if (invitingUserId) return;
-    if (memberIdSet.has(user._id)) return;
 
     const optimisticMember: Member = {
       userId: user._id,
@@ -166,48 +166,49 @@ export default function GroupMembersSection({
     }
   };
 
-const removeInvite = async (member: any) => {
-  const uid =
-    typeof member.userId === "string"
-      ? member.userId
-      : member.userId?._id;
+  const removeInvite = async (member: Member) => {
+    const uid =
+      typeof member.userId === "string"
+        ? member.userId
+        : member.userId?._id;
 
-  if (!uid) return;
-  const prevMembers = localMembers;
-  const nextMembers = localMembers.filter((m) => {
-    const id =
-      typeof m.userId === "string"
-        ? m.userId
-        : m.userId?._id;
+    if (!uid) return;
 
-    return id !== uid;
-  });
+    const prevMembers = localMembers;
+    const nextMembers = localMembers.filter((m) => {
+      const id =
+        typeof m.userId === "string"
+          ? m.userId
+          : m.userId?._id;
 
-  updateMembers(nextMembers);
-  setRemovingUserId(uid);
+      return id !== uid;
+    });
 
-  try {
-    await axios.delete(
-      `${API_URL}/api/groups/${groupId}/invite/${uid}`
-    );
-  } catch (err: any) {
-    updateMembers(prevMembers);
-    Alert.alert(
-      "ลบคำเชิญไม่สำเร็จ",
-      err?.response?.data?.message || "กรุณาลองใหม่อีกครั้ง"
-    );
+    updateMembers(nextMembers);
+    setRemovingUserId(uid);
 
-  } finally {
-    setRemovingUserId(null);
-  }
-};
+    try {
+      await axios.delete(`${API_URL}/api/groups/${groupId}/invite/${uid}`);
+    } catch (err: any) {
+      updateMembers(prevMembers);
+
+      Alert.alert(
+        "ลบคำเชิญไม่สำเร็จ",
+        err?.response?.data?.message || "กรุณาลองใหม่อีกครั้ง"
+      );
+    } finally {
+      setRemovingUserId(null);
+    }
+  };
 
   return (
     <View>
-      <Text className="text-gray-600 font-sans font-semibold text-lg mb-3">
+
+      <Text className="text-lg font-sans font-semibold text-gray-800 mb-4">
         สมาชิกในกลุ่ม
       </Text>
 
+      {/* OWNER */}
       <View className="flex-row items-center mb-4">
         <Image
           source={avatarSource(owner.avatar)}
@@ -222,82 +223,83 @@ const removeInvite = async (member: any) => {
           name="ribbon"
           size={18}
           color="#F97316"
-          style={{ marginLeft: 8 }}
+          style={{ marginLeft: 6 }}
         />
       </View>
 
-      {localMembers.length === 0 ? (
-        <Text className="text-sm text-gray-500 font-sans font-medium mb-2">
-          ยังไม่มีสมาชิกเพิ่มเติม
-        </Text>
-      ) : (
-        localMembers.map((member, index) => {
-          const isPending = member.status === "pending";
-          const memberId =
-            typeof member.userId === "string"
-              ? member.userId
-              : member.userId?._id;
-          const isRemoving = removingUserId === memberId;
+      {/* MEMBERS */}
+      {localMembers.map((member, idx) => {
+        const memberId =
+          typeof member.userId === "string"
+            ? member.userId
+            : member.userId?._id;
 
-          return (
-            <View
-              key={`${member.userId}-${index}`}
-              className="flex-row items-center py-2"
-            >
-              <Image
-                source={avatarSource(member.avatar)}
-                className="w-10 h-10 rounded-full"
-              />
+        const isPending = member.status === "pending";
+        const isRemoving = removingUserId === memberId;
 
-              <View className="ml-3 flex-1">
-                <Text className="font-sans font-medium text-gray-800">
-                  {member.name}
-                </Text>
+        return (
+          <View
+            key={`${memberId}-${idx}`}
+            className="flex-row items-center py-3 border-b border-gray-100"
+          >
 
-                <Text className="text-xs text-gray-500 font-sans font-medium mt-0.5">
-                  {isPending ? "กำลังเชิญ" : "เข้าร่วมแล้ว"}
-                </Text>
-              </View>
+            <Image
+              source={avatarSource(member.avatar)}
+              className="w-10 h-10 rounded-full"
+            />
 
-              {isOwner && isPending ? (
-                <Pressable
-                  onPress={() => removeInvite(member)}
-                  disabled={isRemoving}
-                  className="w-9 h-9 rounded-full bg-red-50 items-center justify-center"
-                >
-                  {isRemoving ? (
-                    <ActivityIndicator size="small" color="#EF4444" />
-                  ) : (
-                    <Ionicons name="close" size={18} color="#EF4444" />
-                  )}
-                </Pressable>
-              ) : null}
+            <View className="ml-3 flex-1">
+
+              <Text className="font-sans font-medium text-gray-800">
+                {member.name}
+              </Text>
+
+              <Text className="text-xs text-gray-500 font-sans font-medium">
+                {isPending ? "กำลังเชิญ" : "เข้าร่วมแล้ว"}
+              </Text>
+
             </View>
-          );
-        })
-      )}
+
+            {isOwner && isPending && (
+              <Pressable
+                onPress={() => removeInvite(member)}
+                disabled={isRemoving}
+                className="items-center justify-center"
+              >
+                {isRemoving ? (
+                  <ActivityIndicator size="small" color="#EF4444" />
+                ) : (
+                  <Ionicons name="close-circle" size={22} color="#EF4444" />
+                )}
+              </Pressable>
+            )}
+
+          </View>
+        );
+      })}
 
       {isOwner && (
         <Pressable
           onPress={() => setOverlayOpen(true)}
-          className="bg-blue-500 py-3 rounded-full items-center flex-row justify-center mt-4"
+          className="mt-4 bg-blue-500 py-3 rounded-2xl flex-row items-center justify-center"
         >
           <Ionicons name="person-add" size={18} color="white" />
-          <Text className="text-white font-sans font-semibold ml-2">
+          <Text className="ml-2 text-white font-sans font-semibold">
             เชิญเพื่อน
           </Text>
         </Pressable>
       )}
 
+      {/* MODAL */}
       <Modal visible={overlayOpen} animationType="slide" transparent>
         <View className="flex-1 bg-black/40 justify-end">
           <View className="bg-white rounded-t-3xl p-5 max-h-[80%]">
             <View className="flex-row items-center mb-4">
               <Pressable onPress={() => setOverlayOpen(false)}>
-                <Ionicons name="chevron-down" size={28} color="#111827" />
+                <Ionicons name="chevron-down" size={28} />
               </Pressable>
 
-              <Text className="ml-3 font-sans font-semibold text-lg">
+              <Text className="ml-3 text-lg font-sans font-semibold">
                 เชิญเพื่อน
               </Text>
             </View>
@@ -307,7 +309,6 @@ const removeInvite = async (member: any) => {
                 value={search}
                 onChangeText={setSearch}
                 placeholder="ค้นหาเพื่อน"
-                placeholderTextColor="#9CA3AF"
                 className="flex-1 font-sans text-gray-800"
               />
 
@@ -316,15 +317,10 @@ const removeInvite = async (member: any) => {
               ) : (
                 <Ionicons name="search" size={18} color="#9CA3AF" />
               )}
+
             </View>
 
-            <ScrollView keyboardShouldPersistTaps="handled">
-              {search.trim().length > 0 && filteredResults.length === 0 && !searching ? (
-                <Text className="text-center text-sm text-gray-500 font-sans font-medium py-4">
-                  ไม่พบผู้ใช้ หรือผู้ใช้นี้อยู่ในกลุ่มแล้ว
-                </Text>
-              ) : null}
-
+            <ScrollView>
               {filteredResults.map((u) => {
                 const isInviting = invitingUserId === u._id;
 
@@ -335,6 +331,7 @@ const removeInvite = async (member: any) => {
                     disabled={isInviting}
                     className="flex-row items-center py-3 border-b border-gray-100"
                   >
+
                     <Image
                       source={avatarSource(u.avatar)}
                       className="w-10 h-10 rounded-full"
@@ -347,7 +344,7 @@ const removeInvite = async (member: any) => {
                     {isInviting ? (
                       <ActivityIndicator size="small" />
                     ) : (
-                      <Text className="text-orange-500 font-sans font-medium">
+                      <Text className="text-orange-500 font-medium">
                         เชิญ
                       </Text>
                     )}

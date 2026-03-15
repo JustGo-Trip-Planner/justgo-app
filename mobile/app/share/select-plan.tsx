@@ -26,12 +26,9 @@ export default function SelectMyPlanScreen() {
     const run = async () => {
       try {
         setLoading(true);
-        // ✅ ดึงแผนของฉัน (ต้องมี endpoint)
-        // แนะนำทำ GET /api/plan/me ที่ backend (ใช้ JWT)
         const res = await axios.get<Plan[]>("/api/plan/me");
         setPlans(Array.isArray(res.data) ? res.data : []);
 
-        // ✅ ดึง myPlanId ในกลุ่มเพื่อ preselect
         if (groupId) {
           const sp = await axios.get<{ myPlanId: string | null }>(`/api/groups/${groupId}/submit`);
           if (sp.data?.myPlanId) setSelected(sp.data.myPlanId);
@@ -53,7 +50,7 @@ export default function SelectMyPlanScreen() {
       setSubmitting(true);
       await axios.post(`/api/groups/${groupId}/submit`, { planId: selected });
       Alert.alert("สำเร็จ", "ส่งแผนเข้ากลุ่มแล้ว");
-      router.back(); // กลับหน้า group detail
+      router.back();
     } catch (e: any) {
       Alert.alert("ส่งแผนไม่สำเร็จ", e?.response?.data?.message || "ลองใหม่อีกครั้ง");
     } finally {

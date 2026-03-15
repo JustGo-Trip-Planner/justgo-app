@@ -64,10 +64,10 @@ export default function HomeScreen() {
         <HomeScroll contentPaddingBottom={80}>
 
           {/* Title */}
-          <Text className="text-2xl mx-4 text-blue-800 mb-1 font-semibold">
+          <Text className="text-2xl mx-4 text-sky-700 mb-1 font-semibold">
             ออกสำรวจเมืองไทยได้แล้ววันนี้
           </Text>
-          <Text className="text-xl mx-4 text-blue-800 mb-4 font-sans">
+          <Text className="text-xl mx-4 text-sky-700 mb-4 font-sans">
             ยกระดับการท่องเที่ยวไทยของคุณ
           </Text>
 

@@ -15,6 +15,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import axios from "axios";
 import Constants from "expo-constants";
 import { useAuth } from "@/context/AuthContext";
+import VotingDeadlineModal from "@/components/share/VotingModal";
 
 type Member = {
   _id: string;
@@ -22,10 +23,18 @@ type Member = {
   avatar?: string;
 };
 
+type Group = {
+  _id: string;
+  name: string;
+  members: Member[];
+  votingDeadline?: string;
+};
+
 export default function EditGroupScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { user } = useAuth();
+
   const API_URL = Constants.expoConfig?.extra?.API_URL;
 
   const [groupName, setGroupName] = useState("");
@@ -33,17 +42,23 @@ export default function EditGroupScreen() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
+  const [deadline, setDeadline] = useState<Date | null>(null);
+  const [deadlineOpen, setDeadlineOpen] = useState(false);
+  const [deadlineEnabled, setDeadlineEnabled] = useState(false);
+
   useEffect(() => {
     if (!id) return;
 
     const fetchGroup = async () => {
       try {
-        const res = await axios.get(`${API_URL}/api/groups/${id}`);
+        const res = await axios.get<Group>(`${API_URL}/api/groups/${id}`);
         const group = res.data;
 
         setGroupName(group.name);
-        setMembers(group.members || []);
-      } catch (err) {
+        setMembers(group.members ?? []);
+        setDeadline(group.votingDeadline ? new Date(group.votingDeadline) : null);
+        setDeadlineEnabled(!!group.votingDeadline);
+      } catch {
         Alert.alert("โหลดข้อมูลกลุ่มไม่สำเร็จ");
       } finally {
         setLoading(false);
@@ -52,6 +67,11 @@ export default function EditGroupScreen() {
 
     fetchGroup();
   }, [id]);
+
+  const avatarSource = (uri?: string) =>
+    uri?.trim()
+      ? { uri }
+      : require("@/assets/images/default.png");
 
   const removeMember = (memberId: string) => {
     setMembers((prev) => prev.filter((m) => m._id !== memberId));
@@ -63,26 +83,35 @@ export default function EditGroupScreen() {
       return;
     }
 
+    if (deadlineEnabled && !deadline) {
+      Alert.alert("กรุณาเลือกวันหมดเขตโหวต");
+      return;
+    }
+
     try {
       setSaving(true);
 
-      await axios.put(`${API_URL}/api/groups/${id}`, {
+      const payload = {
         name: groupName,
-        members,
-      });
+        members: members.map((m: any) => ({
+          userId: m.userId?._id ?? m._id,
+          name: m.name,
+          avatar: m.avatar ?? "",
+        })),
+        votingDeadline: deadlineEnabled
+          ? deadline?.toISOString()
+          : null,
+      };
+
+      await axios.put(`${API_URL}/api/groups/${id}`, payload);
 
       router.replace("/share");
-    } catch (err) {
+    } catch {
       Alert.alert("บันทึกไม่สำเร็จ");
     } finally {
       setSaving(false);
     }
   };
-
-  const avatarSource = (uri?: string) =>
-    uri && uri.trim()
-      ? { uri }
-      : require("@/assets/images/default.png");
 
   if (loading) {
     return (
@@ -100,123 +129,165 @@ export default function EditGroupScreen() {
     >
       <View className="flex-1 pt-14 px-5">
 
-        {/* Header */}
-        <View className="relative mb-6 h-12 justify-center">
+        {/* HEADER */}
+        <View className="flex-row items-center mb-6">
           <Pressable
             onPress={() => router.back()}
-            className="absolute left-0 bg-white/80 p-2 rounded-full"
+            className="w-10 h-10 rounded-full bg-white items-center justify-center mr-3 shadow"
           >
-            <Ionicons name="chevron-back" size={22} color="#111827" />
+            <Ionicons name="chevron-back" size={22} />
           </Pressable>
 
-          <View className="items-center">
-            <Image
-              source={require("@/assets/icons/logo.png")}
-              className="h-8"
-              resizeMode="contain"
-            />
-          </View>
+          <Text className="text-xl font-semibold text-gray-900">
+            แก้ไขกลุ่ม
+          </Text>
         </View>
 
-        {/* Card */}
-        <View className="bg-white/50 rounded-3xl px-6 py-7">
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ paddingBottom: 140 }}
+        >
 
-          {/* Title */}
-          <View className="flex-row justify-between items-center mb-6">
-            <Text className="text-2xl font-semibold text-blue-800 font-sans">
-              แก้ไขกลุ่ม
+          {/* GROUP NAME */}
+          <View className="bg-white rounded-3xl p-5 mb-5 shadow-sm">
+            <Text className="text-gray-500 mb-2 font-medium">
+              ชื่อกลุ่ม
             </Text>
 
-            <Pressable>
-              <Ionicons name="trash-outline" size={22} color="#EF4444" />
-            </Pressable>
+            <TextInput
+              value={groupName}
+              onChangeText={setGroupName}
+              placeholder="เช่น Trip Pattaya"
+              className="bg-gray-100 px-4 py-3 rounded-xl"
+            />
           </View>
 
-          {/* Group Name */}
-          <Text className="text-gray-600 font-medium mb-2">
-            ชื่อกลุ่ม
-          </Text>
-          <TextInput
-            value={groupName}
-            onChangeText={setGroupName}
-            className="bg-white rounded-2xl px-4 py-3 mb-6"
-          />
+          {/* MEMBERS */}
+          <View className="bg-white rounded-3xl p-5 mb-5 shadow-sm">
 
-          {/* Members */}
-          <Text className="text-gray-600 font-medium mb-3">
-            สมาชิก
-          </Text>
-
-          {members.map((member) => (
-            <View
-              key={member._id}
-              className="flex-row items-center py-3"
-            >
-              <Image
-                source={avatarSource(member.avatar)}
-                className="w-10 h-10 rounded-full"
-              />
-              <Text className="ml-3 flex-1 font-medium">
-                {member.name}
+            <View className="flex-row items-center justify-between mb-4">
+              <Text className="font-semibold text-gray-900">
+                สมาชิกในกลุ่ม
               </Text>
 
-              {user?.id !== member._id && (
-                <Pressable onPress={() => removeMember(member._id)}>
-                  <Ionicons
-                    name="trash-outline"
-                    size={20}
-                    color="#EF4444"
-                  />
-                </Pressable>
-              )}
-            </View>
-          ))}
-
-          {/* Footer Info */}
-          <View className="flex-row justify-between mt-6 mb-6">
-            <View className="flex-row items-center">
-              <Ionicons name="calendar-outline" size={16} color="#6B7280" />
-              <Text className="ml-2 text-gray-500 text-sm">
-                สร้างเมื่อ 21 ก.ย. 2568
+              <Text className="font-sans text-gray-500">
+                {members.length} คน
               </Text>
             </View>
 
-            <View className="flex-row items-center">
-              <Ionicons name="people-outline" size={16} color="#6B7280" />
-              <Text className="ml-2 text-gray-500 text-sm">
-                จำนวน {members.length} คน
-              </Text>
-            </View>
-          </View>
+            {members.map((member, index) => (
+              <View
+                key={`${member._id}-${index}`}
+                className="flex-row items-center py-3 border-b border-gray-100"
+              >
+                <Image
+                  source={avatarSource(member.avatar)}
+                  className="w-11 h-11 rounded-full"
+                />
 
-          {/* Buttons */}
-          <View className="flex-row justify-between">
-            <Pressable
-              onPress={() => router.back()}
-              className="bg-gray-200 px-6 py-3 rounded-2xl"
-            >
-              <Text className="font-medium text-gray-700">
-                ยกเลิก
-              </Text>
-            </Pressable>
-
-            <Pressable
-              onPress={handleSave}
-              disabled={saving}
-              className="bg-orange-500 px-8 py-3 rounded-2xl"
-            >
-              {saving ? (
-                <ActivityIndicator color="white" />
-              ) : (
-                <Text className="text-white font-semibold">
-                  บันทึก
+                <Text className="ml-3 flex-1 font-medium text-gray-800">
+                  {member.name}
                 </Text>
-              )}
-            </Pressable>
+
+                {user?.id !== member._id && (
+                  <Pressable
+                    onPress={() => removeMember(member._id)}
+                    className="p-2"
+                  >
+                    <Ionicons name="close-circle" size={22} color="#EF4444" />
+                  </Pressable>
+                )}
+              </View>
+            ))}
           </View>
 
+          {/* DEADLINE */}
+          <View className="bg-white rounded-3xl p-5 mb-5 shadow-sm">
+            <View className="flex-row items-center justify-between mb-3">
+
+              <Text className="font-semibold text-gray-900">
+                วันหมดเขตโหวต
+              </Text>
+
+              <Pressable
+                onPress={() => setDeadlineEnabled(!deadlineEnabled)}
+                className={`w-12 h-7 rounded-full justify-center px-1 ${
+                  deadlineEnabled ? "bg-orange-500" : "bg-gray-300"
+                }`}
+              >
+                <View
+                  className={`w-5 h-5 rounded-full bg-white ${
+                    deadlineEnabled ? "self-end" : "self-start"
+                  }`}
+                />
+              </Pressable>
+            </View>
+
+            {deadlineEnabled && (
+              <Pressable
+                onPress={() => setDeadlineOpen(true)}
+                className="bg-gray-100 px-4 py-3 rounded-xl flex-row items-center justify-between"
+              >
+
+                <Text className="text-gray-800">
+                  {deadline
+                    ? deadline.toLocaleString("th-TH")
+                    : "เลือกวันและเวลา"}
+                </Text>
+
+                <Ionicons
+                  name="calendar-outline"
+                  size={20}
+                  color="#6B7280"
+                />
+
+              </Pressable>
+            )}
+
+            <Text className="font-sans text-gray-500 mt-3">
+              ระบบจะปิดโหวตเมื่อครบเวลา หรือเมื่อสมาชิกโหวตครบ
+            </Text>
+          </View>
+        </ScrollView>
+
+        {/* FOOTER BUTTONS */}
+        <View className="absolute bottom-8 left-5 right-5 flex-row">
+
+          <Pressable
+            onPress={() => router.back()}
+            className="flex-1 bg-gray-200 py-4 rounded-2xl items-center mr-3"
+          >
+            <Text className="font-semibold text-gray-700">
+              ยกเลิก
+            </Text>
+          </Pressable>
+
+          <Pressable
+            onPress={handleSave}
+            disabled={saving}
+            className="flex-1 bg-orange-500 py-4 rounded-2xl items-center"
+          >
+            {saving ? (
+              <ActivityIndicator color="white" />
+            ) : (
+              <Text className="text-white font-semibold">
+                บันทึก
+              </Text>
+            )}
+          </Pressable>
         </View>
       </View>
+
+      {/* DATE MODAL */}
+      <VotingDeadlineModal
+        visible={deadlineOpen}
+        value={deadline}
+        onClose={() => setDeadlineOpen(false)}
+        onConfirm={(date) => {
+          setDeadline(date);
+          setDeadlineOpen(false);
+        }}
+      />
     </ImageBackground>
   );
 }

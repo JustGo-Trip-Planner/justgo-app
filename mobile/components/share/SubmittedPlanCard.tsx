@@ -33,10 +33,11 @@ export default function SubmittedPlanCard({
 }: Props) {
 
   const avatarSource = (uri?: string) =>
-    uri ? { uri } : require("@/assets/images/default.png");
+    uri?.trim()
+      ? { uri }
+      : require("@/assets/images/default.png");
 
   const formatDate = (start: string, end: string) => {
-
     const months = [
       "ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.",
       "ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค."
@@ -49,92 +50,108 @@ export default function SubmittedPlanCard({
   };
 
   return (
-    <View className="bg-white rounded-2xl mb-4 shadow-sm overflow-hidden">
+    <View className="bg-white rounded-3xl overflow-hidden mb-5 shadow-sm">
 
-      <View className="flex-row">
+      {/* IMAGE */}
 
-        {/* IMAGE */}
+      <View className="w-full h-44">
+
         <Image
           source={avatarSource(plan.previewImage)}
-          className="w-28 h-24"
+          className="w-full h-full"
           resizeMode="cover"
         />
 
-        {/* INFO */}
-        <View className="flex-1 p-3 justify-between">
+        {/* OWNER BADGE */}
 
-          <View>
+        <View className="absolute bottom-2 left-3 flex-row items-center bg-white/90 px-2 py-1 rounded-full">
 
-            <Text className="font-semibold text-gray-800 text-base">
-              {plan.trip_title}
-            </Text>
+          <Image
+            source={avatarSource(user.avatar)}
+            className="w-5 h-5 rounded-full"
+          />
 
-            <View className="flex-row items-center mt-1">
-              <Ionicons name="calendar-outline" size={14} color="#6B7280" />
-              <Text className="text-xs text-gray-500 ml-1">
-                {formatDate(plan.start_date, plan.end_date)}
-              </Text>
-            </View>
+          <Text className="ml-1 text-xs text-gray-700 font-sans font-medium">
+            {user.first_name ?? "Unknown"}
+          </Text>
 
-            <Text className="text-xs text-gray-500 mt-1">
-              ประมาณ ~฿{plan.total_budget.toLocaleString()}
-            </Text>
+        </View>
 
-          </View>
+      </View>
 
-          {/* SUBMIT USER */}
-          <View className="flex-row items-center mt-1">
+      {/* CONTENT */}
 
-            <Text className="text-xs text-gray-500 mr-2">
-              เจ้าของแผน
-            </Text>
+      <View className="px-4 py-4">
 
-            <Image
-              source={avatarSource(user.avatar)}
-              className="w-5 h-5 rounded-full"
-            />
+        <Text
+          className="text-base text-gray-900 font-sans font-semibold"
+          numberOfLines={1}
+        >
+          {plan.trip_title}
+        </Text>
 
-            <Text className="text-xs text-gray-600 ml-1">
-              {user.first_name ?? "Unknown"}
-            </Text>
+        {/* DATE */}
 
-          </View>
+        <View className="flex-row items-center mt-2">
+
+          <Ionicons name="calendar-outline" size={15} color="#6B7280" />
+
+          <Text className="ml-1 text-sm text-gray-500 font-sans font-medium">
+            {formatDate(plan.start_date, plan.end_date)}
+          </Text>
+
+        </View>
+
+        {/* BUDGET */}
+
+        <View className="flex-row items-center mt-1">
+
+          <Ionicons name="wallet-outline" size={15} color="#6B7280" />
+
+          <Text className="ml-1 text-sm text-gray-500 font-sans font-medium">
+            ประมาณ ฿{plan.total_budget.toLocaleString()}
+          </Text>
 
         </View>
 
       </View>
 
       {/* ACTIONS */}
-      <View className="flex-row justify-end px-3 pb-3">
 
-        {!voted && (
+      <View className="flex-row items-center justify-between px-4 pb-4">
+
+        {voted ? (
+          <View className="flex-row items-center">
+
+            <Ionicons name="checkmark-circle" size={16} color="#16A34A" />
+            <Text className="ml-1 text-sm text-green-600 font-sans font-medium">
+              โหวตแล้ว
+            </Text>
+
+          </View>
+        ) : (
           <Pressable
             onPress={onPressVote}
-            className="bg-blue-500 px-3 py-1 rounded-full mr-2"
+            className="bg-blue-500 px-4 py-2 rounded-full"
           >
-            <Text className="text-white text-xs font-medium">
-              โหวต
+            <Text className="text-white text-sm font-sans font-medium">
+              โหวตแผนนี้
             </Text>
           </Pressable>
         )}
 
-        {voted && (
-          <Text className="text-green-600 text-xs font-medium mr-3">
-            ✔ โหวตแล้ว
-          </Text>
-        )}
-
         <Pressable
           onPress={onPressView}
-          className="bg-gray-200 px-3 py-1 rounded-full"
+          className="flex-row items-center"
         >
-          <Text className="text-xs font-medium">
-            ดูแผน
+          <Text className="text-sm text-gray-700 font-sans font-medium mr-1">
+            ดูรายละเอียด
           </Text>
+
+          <Ionicons name="chevron-forward" size={16} color="#6B7280" />
         </Pressable>
 
       </View>
-
     </View>
   );
 }

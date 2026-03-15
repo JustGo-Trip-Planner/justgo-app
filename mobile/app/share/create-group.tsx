@@ -35,10 +35,6 @@ export default function CreateGroupScreen() {
   const [creating, setCreating] = useState(false);
   const [searching, setSearching] = useState(false);
 
-  // voting deadline
-  const [deadline, setDeadline] = useState<Date | null>(null);
-  const [deadlineOpen, setDeadlineOpen] = useState(false);
-
   const requestIdRef = useRef(0);
 
   const searchUsers = async (keyword: string) => {
@@ -94,7 +90,6 @@ export default function CreateGroupScreen() {
       
       const payload = {
         name: groupName.trim(),
-        votingDeadline: deadline?.toISOString(),
         members: selectedMembers.map((m) => ({
           userId: m._id,
           name: m.first_name,
@@ -237,23 +232,6 @@ export default function CreateGroupScreen() {
               ))}
             </>
           )}
-          
-          {/* Voting Deadline */}
-          <Text className="text-gray-600 font-medium font-sans mb-2">วันหมดเขตโหวต</Text>
-
-          <Pressable
-            onPress={() => setDeadlineOpen(true)}
-            className="bg-white rounded-2xl px-4 py-3 mb-2 flex-row items-center justify-between"
-          >
-            <Text className="font-sans text-gray-800">
-              {deadline ? deadline.toLocaleString("th-TH") : "เลือกวันและเวลา"}
-            </Text>
-            <Ionicons name="calendar-outline" size={20} color="#9CA3AF" />
-          </Pressable>
-
-          <Text className="text-xs text-gray-500 font-sans mb-4">
-            ระบบจะปิดโหวตเมื่อครบเวลา หรือเมื่อทุกคนโหวตครบ
-          </Text>
 
           {/* Button */}
           <Pressable
@@ -271,17 +249,6 @@ export default function CreateGroupScreen() {
           </Pressable>
         </View>
       </View>
-
-      {/* Voting Deadline Modal */}
-      <VotingDeadlineModal
-        visible={deadlineOpen}
-        value={deadline}
-        onClose={() => setDeadlineOpen(false)}
-        onConfirm={(date) => {
-          setDeadline(date);
-          setDeadlineOpen(false);
-        }}
-      />
     </ImageBackground>
   );
 }

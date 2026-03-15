@@ -108,6 +108,43 @@ export const getGroupById = async (req: AuthRequest, res: Response) => {
   }
 };
 
+// PUT /api/groups/:id
+export const updateGroup = async (req: AuthRequest, res: Response) => {
+  try {
+    if (!req.userId)
+      return res.status(401).json({ message: "Unauthorized" });
+
+    const { id } = req.params;
+    const { name, members, votingDeadline } = req.body;
+
+    const group = await GroupModel.findById(id);
+
+    if (!group) return res.status(404).json({ message: "Group not found" });
+
+    if (String(group.owner) !== String(req.userId)) {
+      return res.status(403).json({ message: "Only owner can edit group" });
+    }
+
+    if (name) {
+      group.name = name.trim();
+    }
+
+    if (members) {
+      group.members = members.map((m: any) => ({
+        userId: new mongoose.Types.ObjectId(m.userId),
+        name: m.name,
+        avatar: m.avatar ?? "",
+        status: "accepted"
+      }));
+    }
+    group.votingDeadline = votingDeadline ? new Date(votingDeadline) : null;
+    await group.save();
+    return res.json(group);
+  } catch (error) {
+    return res.status(500).json({ message: "Update group failed", error });
+  }
+};
+
 // POST /api/groups/:groupId/invite
 export const inviteMember = async (req: AuthRequest, res: Response) => {
   try {

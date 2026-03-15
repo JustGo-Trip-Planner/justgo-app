@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import {
   View,
   Text,
@@ -7,6 +7,8 @@ import {
   Pressable,
   ActivityIndicator,
   ImageBackground,
+  Animated,
+  Dimensions
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter, useFocusEffect } from "expo-router";
@@ -15,13 +17,12 @@ import axios from "axios";
 
 import { useAuth } from "@/context/AuthContext";
 import SubmittedPlanCard from "@/components/share/SubmittedPlanCard";
-import GroupMembersSection, {
-  Member,
-} from "@/components/share/GroupMember";
+import GroupMembersSection,{ Member } from "@/components/share/GroupMember";
+
+const { width } = Dimensions.get("window");
 
 type Owner = {
   _id: string;
-  name?: string;
   first_name?: string;
   avatar?: string;
 };
@@ -55,55 +56,53 @@ type SubmittedItem = {
   };
 };
 
-type VotingStateResponse = {
-  submissions: SubmittedItem[];
-  progress: {
-    eligibleCount: number;
-    completedVoters: number;
-    myVotedPlanIds: string[];
-  };
-};
-
 export default function GroupDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { user } = useAuth();
   const router = useRouter();
+  const { user } = useAuth();
   const API_URL = Constants.expoConfig?.extra?.API_URL;
 
-  const [group, setGroup] = useState<Group | null>(null);
-  const [membersState, setMembersState] = useState<Member[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [group,setGroup] = useState<Group|null>(null);
+  const [membersState,setMembersState] = useState<Member[]>([]);
+  const [submitted,setSubmitted] = useState<SubmittedItem[]>([]);
+  const [loading,setLoading] = useState(false);
 
-  const [submitted, setSubmitted] = useState<SubmittedItem[]>([]);
-  const [progress, setProgress] = useState(0);
-  const [progressText, setProgressText] = useState("");
-  const [myVotedPlanIds, setMyVotedPlanIds] = useState<string[]>([]);
-  const [votingFinished, setVotingFinished] = useState(false);
+  const [progress,setProgress] = useState(0);
+  const [progressText,setProgressText] = useState("");
+  const [votingFinished,setVotingFinished] = useState(false);
 
-  const finalizedPlan = group?.finalizedPlanId;
+  const [tab,setTab] = useState<"info" | "vote">("info");
+
+  const slideAnim = useRef(new Animated.Value(0)).current;
+
+  const switchTab = (next:"info" | "vote") => {
+    setTab(next);
+
+    Animated.spring(slideAnim, {
+      toValue: next === "info" ? 0 : 1,
+      useNativeDriver: false
+    }).start();
+  };
 
   useFocusEffect(
     useCallback(() => {
       if (id) loadData();
-    }, [id])
+    },[id])
   );
 
-  const loadData = async () => {
-    try {
+  const loadData = async ()=>{
+    try{
       setLoading(true);
 
       const groupRes = await axios.get<Group>(`${API_URL}/api/groups/${id}`);
       setGroup(groupRes.data);
       setMembersState(groupRes.data.members ?? []);
 
-      const votingRes = await axios.get<VotingStateResponse>(
-        `${API_URL}/api/groups/${id}/voting-state`
-      );
+      const voteRes = await axios.get(`${API_URL}/api/groups/${id}/voting-state`);
 
-      const { submissions, progress } = votingRes.data;
+      const { submissions, progress } = voteRes.data;
 
       setSubmitted(submissions ?? []);
-      setMyVotedPlanIds(progress?.myVotedPlanIds ?? []);
 
       const percent =
         progress.eligibleCount === 0
@@ -111,73 +110,53 @@ export default function GroupDetailScreen() {
           : progress.completedVoters / progress.eligibleCount;
 
       setProgress(percent);
+
       setProgressText(
         `${progress.completedVoters} / ${progress.eligibleCount} คนโหวตแล้ว`
       );
 
       setVotingFinished(
-        progress.completedVoters === progress.eligibleCount ||
-          !!groupRes.data.finalizedPlanId
+        progress.completedVoters === progress.eligibleCount
       );
+
     } catch (err) {
-      console.log("โหลดข้อมูลกลุ่มไม่สำเร็จ", err);
+      console.log("load group error",err);
     } finally {
       setLoading(false);
     }
   };
 
-  const avatarSource = (uri?: string) =>
-    uri?.trim()
-      ? { uri }
-      : require("@/assets/images/default.png");
-
-  const formatDate = (dateStr: string) => {
-    const months = [
-      "มกราคม",
-      "กุมภาพันธ์",
-      "มีนาคม",
-      "เมษายน",
-      "พฤษภาคม",
-      "มิถุนายน",
-      "กรกฎาคม",
-      "สิงหาคม",
-      "กันยายน",
-      "ตุลาคม",
-      "พฤศจิกายน",
-      "ธันวาคม",
-    ];
-
-    const d = new Date(dateStr);
-
-    return `${String(d.getDate()).padStart(2, "0")} ${
-      months[d.getMonth()]
-    } ${d.getFullYear()}`;
-  };
-
-  if (loading || !group) {
-    return (
-      <View className="flex-1 items-center justify-center">
-        <ActivityIndicator size="large" />
+  if(loading || !group){
+    return(
+      <View className="flex-1 justify-center items-center">
+        <ActivityIndicator size="large"/>
       </View>
-    );
+    )
   }
 
-  const totalPeople = membersState.filter((m) => m.status === "accepted" || m.status === "pending").length + 1;
   const isOwner = String(group.owner._id) === String(user?.id);
 
-  return (
+  const indicatorTranslate = slideAnim.interpolate({
+    inputRange:[0,1],
+    outputRange:[0,width/2-40]
+  });
+
+  return(
     <ImageBackground
       source={require("@/assets/backgrounds/bg.png")}
       resizeMode="cover"
       className="flex-1"
     >
       <View className="flex-1 pt-14 px-5">
-        <View className="relative mb-6 h-12 justify-center">
+        
+        {/* HEADER */}
+        <View className="relative mb-4 h-12 justify-center">
+
           <Pressable
-            onPress={() => router.back()}
+            onPress={()=>router.back()}
             className="absolute left-0 bg-white p-2 rounded-full"
           >
-            <Ionicons name="chevron-back" size={24} color="#111827" />
+            <Ionicons name="chevron-back" size={24}/>
           </Pressable>
 
           <View className="items-center">
@@ -189,176 +168,146 @@ export default function GroupDetailScreen() {
           </View>
         </View>
 
-        <ScrollView
-          className="bg-white/50 rounded-3xl px-6 py-7"
-          contentContainerStyle={{ paddingBottom: 40 }}
-        >
-          <View className="flex-row justify-between items-center mb-6">
-            <Text className="text-3xl font-sans font-semibold text-gray-800">
-              ข้อมูลกลุ่ม
+        {/* GROUP TITLE */}
+        <View className="bg-white/80 rounded-3xl px-6 py-6">
+          <View className="flex-row justify-between items-center">
+
+            <Text className="text-2xl font-semibold text-gray-800 font-sans">
+              {group.name}
             </Text>
 
             {isOwner && (
-              <Pressable onPress={() => router.push(`/share/edit/${group._id}`)}>
-                <Ionicons name="create-outline" size={28} color="#EF4444" />
+              <Pressable
+                onPress={()=>router.push(`/share/edit/${group._id}`)}
+              >
+                <Ionicons name="create-outline" size={22}/>
               </Pressable>
             )}
+
           </View>
 
-          <Text className="text-gray-600 font-sans font-medium text-lg mb-1">
-            ชื่อกลุ่ม
-          </Text>
+          {/* TAB SWITCH */}
+          <View className="mt-6">
+            <View className="flex-row bg-gray-100 rounded-full p-1">
 
-          <Text className="text-blue-800 font-sans font-semibold text-xl mb-4">
-            {group.name}
-          </Text>
-
-          <View className="h-px bg-gray-300 mb-5" />
-
-          <GroupMembersSection
-            groupId={group._id}
-            owner={group.owner}
-            members={membersState}
-            isOwner={isOwner}
-            onMembersChange={setMembersState}
-          />
-
-          <View className="h-px bg-gray-300 my-5" />
-
-          {finalizedPlan && (
-            <View className="bg-white rounded-2xl p-4 mb-5">
-              <View className="flex-row items-center mb-2">
-                <Ionicons name="trophy" size={18} color="#F59E0B" />
-                <Text className="ml-2 font-sans font-semibold text-lg">
-                  แผนการเดินทางของกลุ่ม
-                </Text>
-              </View>
-
-              <Image
-                source={avatarSource(finalizedPlan.previewImage)}
-                className="w-full h-40 rounded-xl mb-3"
+              <Animated.View
+                style={{
+                  position:"absolute",
+                  width:"50%",
+                  height:"100%",
+                  backgroundColor:"white",
+                  borderRadius:999,
+                  transform:[{translateX:indicatorTranslate}]
+                }}
               />
 
-              <Text className="font-sans font-semibold text-base">
-                {finalizedPlan.trip_title}
-              </Text>
-
-              <Text className="text-xs text-gray-500 font-sans font-medium">
-                งบประมาณ ~ {finalizedPlan.total_budget} บาท
-              </Text>
+              <Pressable
+                onPress={()=>switchTab("info")}
+                className="flex-1 py-2 items-center"
+              >
+                <Text className="font-sans font-medium">
+                  ข้อมูลกลุ่ม
+                </Text>
+              </Pressable>
 
               <Pressable
-                onPress={() =>
-                  router.push(`/trip/${finalizedPlan._id}?viewOnly=true`)
-                }
-                className="bg-gray-200 mt-3 px-3 py-2 rounded-full self-start"
+                onPress={()=>switchTab("vote")}
+                className="flex-1 py-2 items-center"
               >
-                <Text className="text-xs font-sans font-medium">ดูแผน</Text>
+                <Text className="font-sans font-medium">
+                  โหวตแผน
+                </Text>
               </Pressable>
+
+            </View>
+          </View>
+        </View>
+
+
+        {/* CONTENT */}
+        <ScrollView
+          className="mt-4"
+          contentContainerStyle={{paddingBottom:60}}
+        >
+
+          {/* GROUP INFO TAB */}
+          {tab === "info" && (
+            <View className="bg-white rounded-3xl p-5">
+              <GroupMembersSection
+                groupId={group._id}
+                owner={group.owner}
+                members={membersState}
+                isOwner={isOwner}
+                onMembersChange={setMembersState}
+              />
             </View>
           )}
 
-          {!finalizedPlan && (
-            <>
-              <Text className="text-lg font-sans font-semibold mb-2">
+          {/* VOTING TAB */}
+          {tab === "vote" && (
+            <View className="bg-white rounded-3xl p-5">
+              {/* PROGRESS */}
+              <Text className="font-sans font-semibold text-lg mb-2">
                 ความคืบหน้าการโหวต
               </Text>
 
               <View className="h-3 bg-gray-200 rounded-full overflow-hidden">
                 <View
-                  style={{ width: `${progress * 100}%` }}
+                  style={{width:`${progress*100}%`}}
                   className="h-3 bg-blue-500"
                 />
               </View>
 
-              <Text className="text-xs text-gray-600 font-sans font-medium mt-1 mb-4">
+              <Text className="text-xs text-gray-500 mt-1 mb-4 font-sans">
                 {progressText}
               </Text>
-            </>
-          )}
 
-          {!votingFinished && !finalizedPlan && (
-            <>
-              <Text className="text-lg font-sans font-semibold mb-2">
-                แผนการเดินทางในกลุ่ม
-              </Text>
+              {votingFinished && (
+                <View className="bg-green-50 border border-green-200 p-3 rounded-xl mb-4">
+                  <Text className="text-green-700 font-sans font-medium">
+                    การโหวตเสร็จสิ้นแล้ว
+                  </Text>
+                </View>
+              )}
 
-              {submitted.map((row) => {
-                const voted = myVotedPlanIds.includes(row.planId._id);
+              {/* PLANS */}
+              {submitted.map((row)=>(
+                <SubmittedPlanCard
+                  key={row._id}
+                  plan={row.planId}
+                  user={row.userId}
+                  onPressVote={()=>router.push(`/share/vote?groupId=${group._id}&planId=${row.planId._id}`)}
+                  onPressView={()=>router.push(`/trip/${row.planId._id}?viewOnly=true`)}
+                />
+              ))}
 
-                return (
-                  <SubmittedPlanCard
-                    key={row._id}
-                    plan={row.planId}
-                    user={row.userId}
-                    voted={voted}
-                    onPressVote={() =>
-                      router.push(
-                        `/share/vote?groupId=${group._id}&planId=${row.planId._id}`
-                      )
-                    }
-                    onPressView={() =>
-                      router.push(`/trip/${row.planId._id}?viewOnly=true`)
-                    }
-                  />
-                );
-              })}
+              {!votingFinished && (
+                <Pressable
+                  onPress={()=>router.push(`/share/select-plan?groupId=${group._id}`)}
+                  className="mt-3 bg-orange-500 py-3 rounded-2xl items-center"
+                >
+                  <Text className="text-white font-semibold font-sans">
+                    นำแผนของฉันเข้าสู่การโหวตแผน
+                  </Text>
+                </Pressable>
+              )}
 
-              <Pressable
-                onPress={() =>
-                  router.push(`/share/select-plan?groupId=${group._id}`)
-                }
-                className="mt-4 bg-orange-500 py-3 rounded-2xl items-center"
-              >
-                <Text className="text-white font-sans font-semibold">
-                  ส่งแผนของฉัน
-                </Text>
-              </Pressable>
-            </>
-          )}
-
-          {votingFinished && (
-            <Pressable
-              onPress={() => router.push(`/share/result/${group._id}`)}
-              className="bg-orange-500 py-3 rounded-2xl items-center mt-5"
-            >
-              <Text className="text-white font-sans font-semibold">
-                สรุปผลโหวต
-              </Text>
-            </Pressable>
-          )}
-
-          <View className="flex-row justify-between mt-6">
-            <View className="flex-row items-center">
-              <Ionicons name="calendar" size={16} color="#F97316" />
-              <Text className="ml-2 text-xs text-gray-600 font-sans font-medium">
-                สร้างกลุ่มเมื่อ {formatDate(group.createdAt)}
-              </Text>
+              {votingFinished && (
+                <Pressable
+                  onPress={()=>router.push(`/share/result/${group._id}`)}
+                  className="mt-3 bg-green-600 py-3 rounded-2xl items-center"
+                >
+                  <Text className="text-white font-semibold font-sans">
+                    ดูสรุปผลโหวต
+                  </Text>
+                </Pressable>
+              )}
             </View>
-
-            <View className="flex-row items-center">
-              <Ionicons name="person" size={16} color="#F97316" />
-              <Text className="ml-2 text-xs text-gray-600 font-sans font-medium">
-                จำนวน {totalPeople} คน
-              </Text>
-            </View>
-          </View>
-
-          {!isOwner && (
-            <Pressable
-              onPress={async () => {
-                await axios.post(`${API_URL}/api/groups/${group._id}/leave`);
-                router.back();
-              }}
-              className="mt-6 bg-red-500 py-3 rounded-2xl items-center"
-            >
-              <Text className="text-white font-sans font-semibold">
-                ออกจากกลุ่ม
-              </Text>
-            </Pressable>
           )}
         </ScrollView>
+
       </View>
+
     </ImageBackground>
   );
 }

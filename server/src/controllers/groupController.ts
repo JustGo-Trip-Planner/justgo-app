@@ -90,6 +90,8 @@ export const getMyGroups = async (req: AuthRequest, res: Response) => {
         { members: { $elemMatch: { userId: uid, status: "accepted" } } },
       ],
     })
+      .populate("owner", "first_name avatar")
+      .populate("members.userId", "first_name avatar")
       .populate("finalizedPlanId")
       .sort({ createdAt: -1 });
 
@@ -141,6 +143,11 @@ export const getMyGroups = async (req: AuthRequest, res: Response) => {
 
       result.push({
         ...g.toObject(),
+        members: g.members.map((m: any) => ({
+          ...m,
+          avatar: m.avatar || m.userId?.avatar || "",
+          name: m.name || m.userId?.first_name || "",
+        })),
         voteProgress: {
           voted: completedVoters,
           total: eligibleUserIds.length,

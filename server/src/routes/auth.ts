@@ -29,6 +29,9 @@ router.post('/login', async (req, res) => {
         first_name: user.first_name,
         last_name: user.last_name,
         avatar: user.avatar,
+        gender: user.gender,
+        birth_date: user.birth_date,
+        phone: user.phone,
       },
     });
   } catch (err) {

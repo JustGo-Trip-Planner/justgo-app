@@ -244,7 +244,11 @@ export default function GroupMembersSection({
           >
 
             <Image
-              source={avatarSource(member.avatar)}
+              source={avatarSource(
+                typeof member.userId === "object"
+                  ? member.userId.avatar
+                  : member.avatar
+              )}
               className="w-10 h-10 rounded-full"
             />
 

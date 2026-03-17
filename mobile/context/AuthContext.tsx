@@ -9,6 +9,9 @@ type User = {
   first_name?: string;
   last_name?: string;
   avatar?: string;
+  gender?: string;
+  birth_date?: string;
+  phone?: string;
 };
 
 type AuthContextType = {

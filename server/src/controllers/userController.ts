@@ -1,6 +1,26 @@
 import { Request, Response } from 'express';
 import mongoose from 'mongoose';
-import User from '../models/userModel';
+import UserModel from '../models/userModel';
+
+export const searchUsers = async (req: Request, res: Response) => {
+  try {
+    const { q } = req.query;
+
+    if (!q || typeof q !== "string") {
+      return res.json([]);
+    }
+
+    const users = await UserModel.find({
+      first_name: { $regex: q, $options: "i" }, // ค้นหาแบบไม่สนตัวพิมพ์เล็กใหญ่
+    })
+      .select("_id first_name avatar")
+      .limit(10);
+
+    res.json(users);
+  } catch (error) {
+    res.status(500).json({ message: "Search failed" });
+  }
+};
 
 export const updateUser = async (req: Request, res: Response) => {
   const rawId = req.params.id;
@@ -11,7 +31,7 @@ export const updateUser = async (req: Request, res: Response) => {
   }
 
   try {
-    const user = await User.findByIdAndUpdate(
+    const user = await UserModel.findByIdAndUpdate(
       id,
       {
         ...req.body,

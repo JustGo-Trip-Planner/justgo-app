@@ -48,14 +48,22 @@ const HotelSchema = new mongoose.Schema({
 }, { _id: false });
 
 const PlanSchema = new mongoose.Schema({
+  user: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",
+    required: true,
+  },
+
   trip_title: String,
   start_date: String,
   end_date: String,
   total_budget: Number,
   total_places: Number,
+
   recommended_hotels: [HotelSchema],
   daily_itinerary: [DailyItinerarySchema],
   daily_budget: [DailyBudgetSchema],
+
   total_expense_breakdown: {
     transportation: Number,
     accommodation: Number,
@@ -63,12 +71,27 @@ const PlanSchema = new mongoose.Schema({
     others: Number,
     total: Number,
   },
+
   route_description: mongoose.Schema.Types.Mixed,
   previewImage: String,
   province: String,
   provinceName: String,
+
+  planStatus: {
+    type: String,
+    enum: ["draft", "submitted", "finalized", "completed"],
+    default: "draft",
+  },
+
+  isArchived: { type: Boolean, default: false },
+
   createdAt: { type: Date, default: Date.now },
 });
+
+PlanSchema.index({ user: 1 });
+PlanSchema.index({ planStatus: 1 });
+PlanSchema.index({ user: 1, start_date: 1 });
+PlanSchema.index({ user: 1, isArchived: 1 });
 
 const PlanModel = mongoose.model("Plan", PlanSchema);
 export default PlanModel;

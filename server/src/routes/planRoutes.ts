@@ -5,14 +5,28 @@ import {
   getSavedPlans,
   getSavedPlanById,
   updatePlanById,
+  getMyPlans,
+  deletePlanById,
+  getCurrentPlans,
+  getHistoryPlans,
+  reusePlan
 } from "../controllers/planController";
+import { verifyToken } from "../middlewares/auth";
 
 const router = Router();
 
-router.get("/", getSavedPlans);
+// public
 router.post("/generate", generatePlans);
-router.post("/save", savePlan);
-router.get("/:id", getSavedPlanById);
-router.put("/:id", updatePlanById);
+
+// protected routes
+router.get("/", verifyToken, getSavedPlans);
+router.get("/me", verifyToken, getMyPlans);
+router.post("/save", verifyToken, savePlan);
+router.get("/current", verifyToken, getCurrentPlans);
+router.get("/history", verifyToken, getHistoryPlans);
+router.post("/:id/reuse", verifyToken, reusePlan);
+router.get("/:id", verifyToken, getSavedPlanById);
+router.put("/:id", verifyToken, updatePlanById);
+router.delete("/:id", verifyToken, deletePlanById);
 
 export default router;

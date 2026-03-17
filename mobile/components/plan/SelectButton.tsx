@@ -1,17 +1,19 @@
 import { View, Text, Pressable, Animated, StyleSheet } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { useEffect, useRef } from "react";
+import { use, useEffect, useRef } from "react";
 import Constants from "expo-constants";
 import axios from "axios";
 import { useRouter } from "expo-router";
 import { usePlan, useSelectedPlan } from "@/context/PlanContext";
+import { useAuth } from "@/context/AuthContext";
 
 export default function SelectButton({ planId }: { planId: string }) {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(20)).current;
-
+  
   const API_URL = Constants.expoConfig?.extra?.API_URL;
   const router = useRouter();
+  const { user } = useAuth();
   const { plan } = usePlan();
   const fullPlan = useSelectedPlan(planId);
 
@@ -31,7 +33,12 @@ export default function SelectButton({ planId }: { planId: string }) {
 
   const handlePlan = async () => {
     try {
+      if (!user) {
+        return null;
+      }
+      
       const res = await axios.post(`${API_URL}/api/plan/save`, {
+        userId: user.id,
         ...plan,
         ...fullPlan
       });

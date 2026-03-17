@@ -6,6 +6,7 @@ import axios from "axios";
 import SearchBar from "@/components/home/SearchBar";
 import DestinationCard from "@/components/home/DestinationCard";
 import SectionHeader from "@/components/home/SectionHeader";
+import HomeScroll from "@/components/layout/HomeScroll";
 
 type Province = {
   _id: string;
@@ -60,21 +61,13 @@ export default function HomeScreen() {
   return (
     <ImageBackground source={require('@/assets/backgrounds/bg.png')} resizeMode="cover" className="flex-1">
       <View className="flex-1 bg-white/20 backdrop-blur-md">
-        <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 80 }} className="pt-14">
-
-          {/* Header */}
-          <View className="items-center mb-6">
-            <Image source={require("@/assets/icons/logo.png")} className="h-10" resizeMode="contain" />
-            <TouchableOpacity className="absolute top-1 right-0">
-              <Ionicons name="notifications-outline" size={32} color="#333" />
-            </TouchableOpacity>
-          </View>
+        <HomeScroll contentPaddingBottom={80}>
 
           {/* Title */}
-          <Text className="text-2xl mx-4 text-blue-800 mb-1 font-semibold">
+          <Text className="text-2xl mx-4 text-sky-700 mb-1 font-semibold">
             ออกสำรวจเมืองไทยได้แล้ววันนี้
           </Text>
-          <Text className="text-xl mx-4 text-blue-800 mb-4 font-sans">
+          <Text className="text-xl mx-4 text-sky-700 mb-4 font-sans">
             ยกระดับการท่องเที่ยวไทยของคุณ
           </Text>
 
@@ -112,7 +105,7 @@ export default function HomeScreen() {
               </ScrollView>
             </View>
           ))}
-        </ScrollView>
+        </HomeScroll>
       </View>
     </ImageBackground>
   );

@@ -1,18 +1,19 @@
-import { View, Text, Image, TouchableOpacity } from "react-native";
+import { View, Text, Image, TouchableOpacity, Pressable } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
 import type { Plan } from "@/types/response";
 
 type Props = {
   plan: Plan;
   onPress?: () => void;
-  editable?: boolean;
+  onDelete?: (plan: Plan) => void;
+  showReuseButton?: boolean;
+  onReuse?: (plan: Plan) => void;
 };
 
 function formatThaiDateRange(start: string, end: string) {
   const monthNames = [
-    "มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน",
-    "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"
+    "มกราคม","กุมภาพันธ์","มีนาคม","เมษายน","พฤษภาคม","มิถุนายน",
+    "กรกฎาคม","สิงหาคม","กันยายน","ตุลาคม","พฤศจิกายน","ธันวาคม"
   ];
 
   const startDate = new Date(start);
@@ -26,73 +27,137 @@ function formatThaiDateRange(start: string, end: string) {
   const endYear = endDate.getFullYear() + 543;
 
   if (startMonth === endMonth && startYear === endYear) {
-    return `${startDay} - ${endDay} ${endMonth} ${endYear}`;
+    return `${startDay} - ${endDay} ${startMonth} ${startYear}`;
   }
 
   return `${startDay} ${startMonth} ${startYear} - ${endDay} ${endMonth} ${endYear}`;
 }
 
-export default function PlanCard({ plan, onPress }: Props) {
-  const router = useRouter();
+export default function PlanCard({
+  plan,
+  onPress,
+  onDelete,
+  showReuseButton = false,
+  onReuse
+}: Props) {
 
   return (
-    <TouchableOpacity
-      onPress={onPress}
-      className="bg-white/90 rounded-2xl overflow-hidden mb-4 w-full"
+    <View
+      className="bg-white rounded-2xl mb-5 overflow-hidden"
       style={{
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.1,
-        shadowRadius: 6,
-        elevation: 2,
+        shadowColor:"#000",
+        shadowOffset:{width:0,height:4},
+        shadowOpacity:0.08,
+        shadowRadius:10,
+        elevation:4
       }}
     >
-      {/* Cover Image */}
-      <Image
-        source={{ uri: plan.previewImage }}
-        className="h-40 w-full"
-        resizeMode="cover"
-      />
 
-      {/* Content */}
-      <View className="p-4 space-y-2">
-        <Text className="text-[17px] font-semibold text-gray-900 font-sans">
-          {plan.trip_title}
-        </Text>
+      {/* HERO IMAGE */}
+      <TouchableOpacity activeOpacity={0.9} onPress={onPress}>
+        <View>
 
-        {/* Place & Hotel */}
-        <View className="flex-row items-center flex-wrap gap-x-3">
-          <Ionicons name="location-outline" size={20} color="#111" />
-          <Text className="text-sm text-gray-700 font-sans">
-            สถานที่ท่องเที่ยว {plan.total_places} แห่ง
-          </Text>
-          <Ionicons name="bed-outline" size={20} color="#111" className="ml-4" />
-          <Text className="text-sm text-gray-700 font-sans">
-            โรงแรมระดับ {plan.recommended_hotels?.[0]?.stars || "-"} ดาว
-          </Text>
+          <Image
+            source={{ uri: plan.previewImage }}
+            className="h-44 w-full"
+            resizeMode="cover"
+          />
+
+          {/* DELETE BUTTON */}
+          {onDelete && (
+            <Pressable
+              onPress={() => onDelete(plan)}
+              className="absolute top-3 right-3 w-9 h-9 rounded-full bg-black/40 items-center justify-center"
+            >
+              <Ionicons name="trash-outline" size={18} color="#fff" />
+            </Pressable>
+          )}
+
+          {/* OVERLAY */}
+          <View className="absolute bottom-0 left-0 right-0 p-4 bg-black/30">
+
+            <Text className="text-white text-lg font-semibold font-sans">
+              {plan.trip_title}
+            </Text>
+
+            <View className="flex-row items-center mt-1">
+              <Ionicons name="calendar-outline" size={14} color="#fff"/>
+              <Text className="ml-1 text-white font-medium font-sans">
+                {formatThaiDateRange(plan.start_date, plan.end_date)}
+              </Text>
+            </View>
+
+          </View>
+
         </View>
+      </TouchableOpacity>
 
-        {/* Dates */}
-        <View className="flex-row items-center gap-x-2">
-          <Text className="text-xs text-gray-500 font-sans">ผู้ร่วมเดินทาง</Text>
-          <Text className="text-xs text-gray-500 font-sans">วันที่เดินทาง</Text>
-          <View className="flex-1 items-end">
-            <Text className="text-sm text-gray-800 font-sans">
-              {formatThaiDateRange(plan.start_date, plan.end_date)}
+
+      {/* INFO */}
+      <View className="px-4 py-3">
+
+        <View className="flex-row items-center justify-between">
+
+          <View className="flex-row items-center">
+            <Ionicons name="location-outline" size={18} color="#374151"/>
+            <Text className="ml-1 text-sm text-gray-700 font-medium font-sans">
+              สถานที่ท่องเที่ยว {plan.total_places} จุด
             </Text>
           </View>
+
+          <View className="flex-row items-center">
+            <Ionicons name="bed-outline" size={18} color="#374151"/>
+            <Text className="ml-1 text-sm text-gray-700 font-medium font-sans">
+              โรงแรมระดับ {plan.recommended_hotels?.[0]?.stars || "-"} ดาว
+            </Text>
+          </View>
+
         </View>
+
       </View>
 
-      {/* Bottom Bar */}
-      <View className="bg-[#e0f2fe] px-4 py-3 rounded-b-2xl">
-        <Text className="text-center text-gray-700 font-sans">
-          ค่าใช้จ่ายทั้งทริปโดยประมาณ{" "}
-          <Text className="font-semibold text-lg text-gray-900">
-            ~฿{plan.total_budget?.toLocaleString()}
+
+      {/* BOTTOM */}
+      <View className="flex-row items-center justify-between px-4 py-3 border-t border-gray-100">
+
+        <View>
+          <Text className="text-xs text-gray-500 font-medium font-sans">
+            ค่าใช้จ่ายประมาณ
           </Text>
-        </Text>
+
+          <Text className="text-lg font-semibold text-gray-900 font-sans">
+            ฿{plan.total_budget?.toLocaleString()}
+          </Text>
+        </View>
+
+        <View className="flex-row items-center space-x-4">
+
+          <Pressable
+            onPress={onPress}
+            className="flex-row items-center px-3 py-1.5 bg-gray-100 rounded-full"
+          >
+            <Ionicons name="eye-outline" size={16} color="#374151"/>
+            <Text className="ml-1 text-gray-700 text-sm font-medium font-sans">
+              ดูแผน
+            </Text>
+          </Pressable>
+
+          {showReuseButton && (
+            <Pressable
+              onPress={() => onReuse?.(plan)}
+              className="flex-row items-center px-3 py-1.5 bg-sky-100 rounded-lg"
+            >
+              <Ionicons name="refresh-outline" size={16} color="#3262AB"/>
+              <Text className="ml-1 text-sky-700 text-sm font-medium font-sans">
+                นำกลับ
+              </Text>
+            </Pressable>
+          )}
+
+        </View>
+
       </View>
-    </TouchableOpacity>
+
+    </View>
   );
 }

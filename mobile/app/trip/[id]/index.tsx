@@ -30,9 +30,10 @@ const TABS = ["ภาพรวม", "แผนเที่ยว", "งบปร
 
 export default function TripViewPlan() {
   const [plan, setPlan] = useState<any>(null);
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, viewOnly } = useLocalSearchParams<{ id: string; viewOnly?: string }>();
   const router = useRouter();
   const API_URL = Constants.expoConfig?.extra?.API_URL;
+  const isViewOnly = viewOnly === "true";
 
   const [activeTab, setActiveTab] = useState(0);
   const buttonVisible = useRef(new Animated.Value(0)).current;
@@ -46,14 +47,6 @@ export default function TripViewPlan() {
       });
     }
   }, [id]);
-
-  const handleSave = async () => {
-    try {
-        await axios.put(`${API_URL}/api/plan/${plan._id}`, plan);
-        console.log("✅ Plan updated successfully");
-    } catch (err) {
-        console.error("❌ Update failed:", err);}
-  };
 
   const snapTo = (to: number) => {
     Animated.spring(topAnim, {
@@ -141,13 +134,17 @@ export default function TripViewPlan() {
             <Ionicons name="chevron-back" size={24} color="#fff" />
           </Pressable>
 
-          <Pressable
-            onPress={() => router.push(`/trip/${id}/edit`)}
-            className="px-5 py-4 rounded-2xl bg-white/25 shadow-lg flex-row items-center"
-          >
-            <Ionicons name="ellipsis-vertical" size={20} color="#fff" />
-            <Text className="text-white font-semibold ml-2">แก้ไขแผน</Text>
-          </Pressable>
+          {!isViewOnly && (
+            <Pressable
+              onPress={() => router.push(`/trip/${id}/edit`)}
+              className="px-4 py-3 rounded-full bg-white/25 flex-row items-center"
+            >
+              <Ionicons name="create-outline" size={20} color="#fff" />
+              <Text className="text-white font-semibold font-sans ml-2">
+                แก้ไขแผน
+              </Text>
+            </Pressable>
+          )}
         </View>
 
       </View>
@@ -171,10 +168,16 @@ export default function TripViewPlan() {
         {/* Title */}
         <Text
           numberOfLines={1}
-          className="text-center text-lg font-semibold mb-2"
+          className="text-center text-lg font-semibold mb-1"
         >
           {plan.trip_title}
         </Text>
+
+        {isViewOnly && (
+          <Text className="text-center font-sans text-gray-500 mb-2">
+            โหมดดูแผน (ไม่สามารถแก้ไขได้)
+          </Text>
+        )}
 
         {/* Tabs */}
         <View className="flex-row justify-around border-b border-gray-200 px-4">

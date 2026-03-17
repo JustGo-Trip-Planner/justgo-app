@@ -204,7 +204,7 @@ export default function GroupMembersSection({
   return (
     <View>
 
-      <Text className="text-lg font-sans font-semibold text-gray-800 mb-4">
+      <Text className="text-xl font-sans font-semibold text-gray-800 mb-4">
         สมาชิกในกลุ่ม
       </Text>
 
@@ -215,7 +215,7 @@ export default function GroupMembersSection({
           className="w-12 h-12 rounded-full"
         />
 
-        <Text className="ml-3 font-sans font-semibold text-gray-800">
+        <Text className="ml-3 text-lg font-semibold text-gray-800">
           {ownerName}
         </Text>
 
@@ -250,11 +250,11 @@ export default function GroupMembersSection({
 
             <View className="ml-3 flex-1">
 
-              <Text className="font-sans font-medium text-gray-800">
+              <Text className="text-lg font-medium text-gray-800">
                 {member.name}
               </Text>
 
-              <Text className="text-xs text-gray-500 font-sans font-medium">
+              <Text className="text-gray-500 font-sans">
                 {isPending ? "กำลังเชิญ" : "เข้าร่วมแล้ว"}
               </Text>
 
@@ -281,7 +281,7 @@ export default function GroupMembersSection({
       {isOwner && (
         <Pressable
           onPress={() => setOverlayOpen(true)}
-          className="mt-4 bg-blue-500 py-3 rounded-2xl flex-row items-center justify-center"
+          className="mt-4 bg-sky-700 py-3 rounded-2xl flex-row items-center justify-center"
         >
           <Ionicons name="person-add" size={18} color="white" />
           <Text className="ml-2 text-white font-sans font-semibold">

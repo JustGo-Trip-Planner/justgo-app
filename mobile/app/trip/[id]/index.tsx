@@ -137,10 +137,12 @@ export default function TripViewPlan() {
           {!isViewOnly && (
             <Pressable
               onPress={() => router.push(`/trip/${id}/edit`)}
-              className="px-5 py-4 rounded-2xl bg-white/25 shadow-lg flex-row items-center"
+              className="px-4 py-3 rounded-full bg-white/25 flex-row items-center"
             >
-              <Ionicons name="ellipsis-vertical" size={20} color="#fff" />
-              <Text className="text-white font-semibold ml-2">แก้ไขแผน</Text>
+              <Ionicons name="create-outline" size={20} color="#fff" />
+              <Text className="text-white font-semibold font-sans ml-2">
+                แก้ไขแผน
+              </Text>
             </Pressable>
           )}
         </View>

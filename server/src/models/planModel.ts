@@ -77,8 +77,21 @@ const PlanSchema = new mongoose.Schema({
   province: String,
   provinceName: String,
 
+  planStatus: {
+    type: String,
+    enum: ["draft", "submitted", "finalized", "completed"],
+    default: "draft",
+  },
+
+  isArchived: { type: Boolean, default: false },
+
   createdAt: { type: Date, default: Date.now },
 });
+
+PlanSchema.index({ user: 1 });
+PlanSchema.index({ planStatus: 1 });
+PlanSchema.index({ user: 1, start_date: 1 });
+PlanSchema.index({ user: 1, isArchived: 1 });
 
 const PlanModel = mongoose.model("Plan", PlanSchema);
 export default PlanModel;

@@ -132,10 +132,10 @@ export default function SubmittedPlanCard({
         ) : (
           <Pressable
             onPress={onPressVote}
-            className="bg-blue-500 px-4 py-2 rounded-full"
+            className="bg-sky-700 px-4 py-2 rounded-full"
           >
             <Text className="text-white text-sm font-sans font-medium">
-              โหวตแผนนี้
+              ให้คะแนนแผน
             </Text>
           </Pressable>
         )}

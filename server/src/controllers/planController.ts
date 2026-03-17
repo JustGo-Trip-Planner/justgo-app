@@ -116,29 +116,144 @@ export async function getSavedPlanById(req: Request, res: Response) {
 
 // GET: get submitted plans in group
 export const getMyPlans = async (req: AuthRequest, res: Response) => {
-  if (!req.userId) return res.status(401).json({ message: "Unauthorized" });
-
-  const plans = await PlanModel.find({ user: req.userId }).sort({ createdAt: -1 });
-  res.json(plans);
+  try {
+    if (!req.userId) return res.status(401).json({ message: "Unauthorized" });
+    
+    const status = String(req.query.status || "").trim();
+    
+    const filter: any = { user: req.userId };
+    
+    if (status && ["draft", "submitted", "finalized", "completed"].includes(status)) {
+      filter.planStatus = status;
+    }
+    
+    const plans = await PlanModel.find(filter).sort({ createdAt: -1 });
+    return res.json(plans);
+  } catch (error) {
+    return res.status(500).json({ message: "Load my plans failed", error });
+  }
 };
 
 // PUT: Update plan by ID
 export const updatePlanById = async (req: Request, res: Response) => {
   const { id } = req.params;
   const updatedData = req.body;
-
+  
   try {
     const updatedPlan = await PlanModel.findByIdAndUpdate(id, updatedData, {
       new: true,
       runValidators: true,
     });
-
+    
     if (!updatedPlan) {
       return res.status(404).json({ message: "Plan not found" });
     }
-
+    
     res.json({ success: true, data: updatedPlan });
   } catch (error) {
     res.status(500).json({ success: false, message: "Update failed", error });
   }
 };
+
+// DELETE: /api/plan/:id
+export const deletePlanById = async (req: AuthRequest, res: Response) => {
+  try {
+    if (!req.userId) return res.status(401).json({ message: "Unauthorized" });
+
+    const { id } = req.params;
+    const plan = await PlanModel.findOneAndDelete({
+      _id: id,
+      user: req.userId
+    });
+
+    if (!plan) return res.status(404).json({ message: "Plan not found" });
+
+    return res.json({ success: true, message: "Plan deleted" });
+  } catch (err) {
+    return res.status(500).json({ message: "Delete plan failed" });
+  }
+};
+
+export const getCurrentPlans = async (req: AuthRequest, res: Response) => {
+  try {
+    if (!req.userId) return res.status(401).json({ message: "Unauthorized" });
+
+    await autoArchivePlans(req.userId);
+
+    const plans = await PlanModel.find({
+      user: req.userId,
+      isArchived: false
+    }).sort({ start_date: 1 });
+
+    res.json(plans);
+  } catch (err) {
+    res.status(500).json({ message: "Load current plans failed", err });
+  }
+};
+
+export const getHistoryPlans = async (req: AuthRequest, res: Response) => {
+  try {
+    if (!req.userId) return res.status(401).json({ message: "Unauthorized" });
+    
+    await autoArchivePlans(req.userId);
+    
+    const plans = await PlanModel.find({
+      user: req.userId,
+      isArchived: true
+    }).sort({ end_date: -1 });
+
+    res.json(plans);
+  } catch (err) {
+    res.status(500).json({ message: "Load history plans failed", err });
+  }
+};
+
+export const reusePlan = async (req: AuthRequest, res: Response) => {
+  try {
+    if (!req.userId) return res.status(401).json({ message: "Unauthorized" });
+
+    const { id } = req.params;
+    const { start_date, end_date } = req.body;
+
+    if (!start_date || !end_date) return res.status(400).json({ message: "Invalid date range" });
+
+    const start = new Date(start_date);
+    const end = new Date(end_date);
+
+    const today = new Date();
+    if (start < today) return res.status(400).json({ message: "Cannot select past date" });
+
+    const plan = await PlanModel.findById(id);
+    if (!plan) return res.status(404).json({ message: "Plan not found" });
+
+    const { _id, __v, ...rest } = plan.toObject();
+    const cloned = new PlanModel({
+      ...rest,
+      start_date: start.toISOString(),
+      end_date: end.toISOString(),
+      isArchived: false,
+      planStatus: "draft",
+      createdAt: new Date()
+    });
+
+    await cloned.save();
+    res.json(cloned);
+  } catch (err) {
+    res.status(500).json({ message: "Reuse plan failed", err });
+  }
+};
+
+async function autoArchivePlans(userId: string) {
+  const today = new Date();
+
+  await PlanModel.updateMany(
+    {
+      user: userId,
+      isArchived: false,
+      end_date: { $lt: today.toISOString().slice(0,10) }
+    },
+    {
+      $set: { isArchived: true }
+    }
+  );
+}

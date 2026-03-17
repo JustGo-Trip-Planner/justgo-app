@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import mongoose from "mongoose";
 import config from "./config";
+import { startCronJobs } from "./cron";
 
 import provinceRoutes from "./routes/provinceRoutes";
 import planRoutes from "./routes/planRoutes";
@@ -36,4 +37,5 @@ app.get("/api/test", (req, res) => {
 
 app.listen(config.port, () => {
   console.log(`Backend listening on http://localhost:${config.port}`);
+  startCronJobs();
 });

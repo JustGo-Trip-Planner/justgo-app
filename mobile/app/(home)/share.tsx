@@ -13,6 +13,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter, useFocusEffect } from "expo-router";
 import axios from "axios";
+import Constants  from "expo-constants";
 
 import GroupCard, { Group } from "@/components/share/GroupCard";
 import PlanCard from "@/components/share/PlanCard";
@@ -24,6 +25,7 @@ export default function ShareScreen() {
   const router = useRouter();
   const { user } = useAuth();
   const { groups, loading, refreshGroups } = useGroups();
+  const API_URL = Constants.expoConfig?.extra?.API_URL;
 
   const scrollRef = useRef<ScrollView>(null);
   const [index, setIndex] = useState(0);
@@ -42,7 +44,7 @@ export default function ShareScreen() {
         style: "destructive",
         onPress: async () => {
           try {
-            await axios.delete(`/api/groups/${group._id}`);
+            await axios.delete(`${API_URL}/api/groups/${group._id}`);
             await refreshGroups();
           } catch {
             Alert.alert("ลบกลุ่มไม่สำเร็จ");
@@ -117,7 +119,7 @@ export default function ShareScreen() {
               <View className="py-16 items-center">
                 <Ionicons name="people-outline" size={34} color="#9CA3AF" />
 
-                <Text className="text-gray-500 mt-3">
+                <Text className="text-gray-500 font-medium mt-3">
                   ยังไม่มีกลุ่ม
                 </Text>
               </View>
@@ -189,7 +191,7 @@ export default function ShareScreen() {
               <View className="py-16 items-center">
                 <Ionicons name="map-outline" size={34} color="#9CA3AF" />
 
-                <Text className="text-gray-500 mt-3">
+                <Text className="text-gray-500 font-medium mt-3">
                   ยังไม่มีแผนที่แชร์
                 </Text>
               </View>

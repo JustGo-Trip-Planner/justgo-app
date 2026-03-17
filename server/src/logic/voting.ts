@@ -2,48 +2,47 @@ import GroupModel from "../models/groupModel";
 import GroupPlanModel from "../models/groupPlanModel";
 import VoteModel from "../models/voteModel";
 
-export const checkAndCloseVoting = async (groupId: string) => {
+export async function checkAndCloseVoting(groupId: string, round?: number) {
   const group = await GroupModel.findById(groupId);
   if (!group) return;
 
+  const activeRound = round ?? group.currentRound;
+
   if (group.votingClosed) return;
-  if (group.finalizedPlanId) return;
 
-  const now = new Date();
+  const submissions = await GroupPlanModel.find({
+    groupId,
+    round: activeRound,
+  }).lean();
 
-  // 1) deadline reached
-  if (group.votingDeadline && now >= group.votingDeadline) {
-    group.votingClosed = true;
-    group.votingClosedReason = "deadline";
-    await group.save();
-    return;
-  }
-
-  // 2) all voted condition: ทุก eligible โหวตครบทุก submissions
-  const submissions = await GroupPlanModel.find({ groupId }).lean();
-  const planIds = submissions.map((s: any) => String(s.planId));
-  const requiredPlans = planIds.length;
-
-  // ถ้ายังไม่มีแผนในกลุ่ม → ยังไม่ปิดโหวต
-  if (requiredPlans === 0) return;
-
-  const acceptedMembers = group.members.filter((m: any) => m.status === "accepted");
+  const acceptedMembers = (group.members ?? []).filter((m: any) => m.status === "accepted");
   const eligibleUserIds = [
     String(group.owner),
     ...acceptedMembers.map((m: any) => String(m.userId)),
   ];
 
-  const votes = await VoteModel.find({ groupId }).lean();
+  const planIds = submissions.map((s: any) => String(s.planId));
+  const requiredPlans = planIds.length;
+
+  if (requiredPlans === 0) return;
+
+  const votes = await VoteModel.find({
+    groupId,
+    round: activeRound,
+  }).lean();
+
   const votedSet = new Set(votes.map((v: any) => `${v.userId}:${v.planId}`));
 
-  const allCompleted = eligibleUserIds.every((uid) => {
-    const votedCount = planIds.filter((pid) => votedSet.has(`${uid}:${pid}`)).length;
-    return votedCount === requiredPlans;
-  });
+  const allVoted = eligibleUserIds.every((uid) =>
+    planIds.every((pid) => votedSet.has(`${uid}:${pid}`))
+  );
 
-  if (allCompleted) {
+  const deadlinePassed =
+    !!group.votingDeadline && new Date(group.votingDeadline).getTime() <= Date.now();
+
+  if (allVoted || deadlinePassed) {
     group.votingClosed = true;
-    group.votingClosedReason = "all_voted";
+    group.votingClosedReason = allVoted ? "all_voted" : "deadline";
     await group.save();
   }
-};
+}

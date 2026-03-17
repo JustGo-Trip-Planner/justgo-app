@@ -14,6 +14,7 @@ const VoteScoreSchema = new mongoose.Schema(
 const VoteSchema = new mongoose.Schema(
   {
     groupId: { type: mongoose.Schema.Types.ObjectId, ref: "Group", required: true, index: true },
+    round: { type: Number, required: true, default: 1, index: true },
     userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true, index: true },
     planId: { type: mongoose.Schema.Types.ObjectId, ref: "Plan", required: true, index: true },
 
@@ -24,7 +25,7 @@ const VoteSchema = new mongoose.Schema(
   { timestamps: false }
 );
 
-VoteSchema.index({ groupId: 1, userId: 1, planId: 1 }, { unique: true });
+VoteSchema.index({ groupId: 1, round: 1, userId: 1, planId: 1 }, { unique: true });
 
 const VoteModel = mongoose.model("Vote", VoteSchema);
 export default VoteModel;

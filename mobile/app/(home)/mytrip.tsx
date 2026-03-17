@@ -1,67 +1,180 @@
-import { View, Text, ScrollView, TouchableOpacity, Image, ImageBackground, ActivityIndicator } from "react-native";
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  ImageBackground,
+  ActivityIndicator,
+  Alert,
+} from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import axios from "axios";
+
 import type { Plan } from "@/types/response";
 import PlanCard from "@/components/home/PlanCard";
 import { useAuth } from "@/context/AuthContext";
 import HomeScroll from "@/components/layout/HomeScroll";
+import MovePlanModal from "@/components/mytrip/MovePlan";
 
 export default function MyTrip() {
   const [plans, setPlans] = useState<Plan[]>([]);
-  const [loadingPlans, setLoadingPlans] = useState(false);
+  const [history, setHistory] = useState<Plan[]>([]);
+
+  const [loading, setLoading] = useState(false);
+  const [tab, setTab] = useState<"current" | "history">("current");
+
+  const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
+  const [modalOpen, setModalOpen] = useState(false);
 
   const router = useRouter();
-  const { token, loading } = useAuth();
+  const { token, loading: authLoading } = useAuth();
+
+  const fetchCurrentPlans = async () => {
+    try {
+      const res = await axios.get("/api/plan/current");
+      setPlans(Array.isArray(res.data) ? res.data : []);
+    } catch (err) {
+      console.log("load current plan error", err);
+      setPlans([]);
+    }
+  };
+
+  const fetchHistoryPlans = async () => {
+    try {
+      const res = await axios.get("/api/plan/history");
+      setHistory(Array.isArray(res.data) ? res.data : []);
+    } catch (err) {
+      console.log("load history plan error", err);
+      setHistory([]);
+    }
+  };
+
+  const loadAll = async () => {
+    try {
+      setLoading(true);
+      await Promise.all([fetchCurrentPlans(), fetchHistoryPlans()]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    if (loading) return;
+    if (authLoading) return;
 
     if (!token) {
       setPlans([]);
+      setHistory([]);
       return;
     }
 
-    const fetchPlans = async () => {
-      try {
-        setLoadingPlans(true);
-        const res = await axios.get("/api/plan");
-        const data = Array.isArray(res.data) ? res.data : [];
-        setPlans(data);
-      } catch (err: any) {
-        if (err?.response?.status !== 401) {
-          console.error("❌ Fetch failed:", err);
-        }
-        setPlans([]);
-      } finally {
-        setLoadingPlans(false);
-      }
-    };
+    loadAll();
+  }, [authLoading, token]);
 
-    fetchPlans();
-  }, [loading, token]);
+  const deletePlan = async (planId: string) => {
+    try {
+      await axios.delete(`/api/plan/${planId}`);
+
+      setPlans((prev) => prev.filter((p) => p._id !== planId));
+      setHistory((prev) => prev.filter((p) => p._id !== planId));
+    } catch (err) {
+      console.log("delete plan error", err);
+    }
+  };
+
+  const confirmDelete = (plan: Plan) => {
+    if (!plan._id) {
+      Alert.alert("ไม่สามารถลบแผนได้", "ไม่พบรหัสแผนการเดินทาง");
+      return;
+    }
+
+    Alert.alert(
+      "ลบแผนการเดินทาง",
+      `คุณต้องการลบ "${plan.trip_title}" หรือไม่`,
+      [
+        {
+          text: "ยกเลิก",
+          style: "cancel",
+        },
+        {
+          text: "ลบแผน",
+          style: "destructive",
+          onPress: () => deletePlan(plan._id as string),
+        },
+      ]
+    );
+  };
 
   const EmptyState = () => (
-    <View className="bg-white/80 rounded-2xl shadow-md p-12 items-center justify-center px-6 h-full">
+    <View className="h-full items-center justify-center rounded-2xl bg-white/80 px-6 py-12 shadow-md">
       <Ionicons name="map-outline" size={72} color="#cbd5e1" />
-      <Text className="text-xl font-semibold text-gray-700 mt-4 mb-2">
+
+      <Text className="mt-4 mb-2 text-xl font-semibold font-sans text-gray-700">
         ยังไม่มีแผนของคุณ
       </Text>
-      <Text className="text-gray-500 text-center font-sans mb-6">
+
+      <Text className="mb-6 text-center font-medium font-sans text-gray-500">
         เริ่มสร้างแผนการเดินทางเพื่อบันทึกทริปแรกของคุณ
       </Text>
+
       <TouchableOpacity
         onPress={() => router.push("/")}
-        className="bg-orange-500 px-6 py-3 rounded-full flex-row items-center"
+        className="flex-row items-center rounded-full bg-orange-500 px-6 py-3"
       >
         <Ionicons name="add-circle-outline" size={20} color="#fff" />
-        <Text className="text-white text-base font-medium ml-2">
-          สร้างแผนการเดินทางของคุณ
+        <Text className="ml-2 text-base font-medium font-sans text-white">
+          สร้างแผนการเดินทาง
         </Text>
       </TouchableOpacity>
     </View>
   );
+
+  const renderCurrentPlans = () => {
+    if (plans.length === 0) {
+      return <EmptyState />;
+    }
+
+    return plans.map((plan, index) => {
+      const planId = plan._id;
+
+      if (!planId) return null;
+
+      return (
+        <PlanCard
+          key={planId || `current-plan-${index}`}
+          plan={plan}
+          onPress={() => router.push(`/trip/${planId}`)}
+          onDelete={() => confirmDelete(plan)}
+        />
+      );
+    });
+  };
+
+  const renderHistoryPlans = () => {
+    if (history.length === 0) {
+      return <EmptyState />;
+    }
+
+    return history.map((plan, index) => {
+      const planId = plan._id;
+
+      if (!planId) return null;
+
+      return (
+        <PlanCard
+          key={planId || `history-plan-${index}`}
+          plan={plan}
+          showReuseButton
+          onPress={() => router.push(`/trip/${planId}?viewOnly=true`)}
+          onReuse={(p) => {
+            setSelectedPlan(p);
+            setModalOpen(true);
+          }}
+          onDelete={() => confirmDelete(plan)}
+        />
+      );
+    });
+  };
 
   return (
     <ImageBackground
@@ -69,47 +182,75 @@ export default function MyTrip() {
       resizeMode="cover"
       className="flex-1"
     >
-      <View className="flex-1 bg-white/20 backdrop-blur-md">
+      <View className="flex-1 bg-white/20">
         <HomeScroll contentPaddingBottom={80}>
-
-          {/* Title */}
-          <Text className="text-2xl text-sky-700 font-semibold text-center mb-1">
+          <Text className="mb-1 text-center text-2xl font-semibold font-sans text-sky-700">
             แผนการเดินทางของฉัน
           </Text>
-          <Text className="text-lg text-sky-700 font-sans text-center mb-6">
+
+          <Text className="mb-6 text-center text-lg font-medium font-sans text-sky-700">
             รวมทุกการเดินทางของคุณไว้ในที่เดียว
           </Text>
 
-          {/* Tabs */}
-          <View className="flex-row justify-center mb-6">
-            <TouchableOpacity className="px-4 py-2 bg-orange-400 rounded-full mr-2">
-              <Text className="text-sm text-white font-sans">แผนเดินทางของคุณ</Text>
+          <View className="mb-6 flex-row justify-center">
+            <TouchableOpacity
+              onPress={() => setTab("current")}
+              className={`mr-2 rounded-full px-4 py-2 ${
+                tab === "current"
+                  ? "bg-orange-400"
+                  : "border border-gray-300 bg-white"
+              }`}
+            >
+              <Text
+                className={`text-sm font-medium font-sans ${
+                  tab === "current" ? "text-white" : "text-gray-700"
+                }`}
+              >
+                แผนเดินทางของคุณ
+              </Text>
             </TouchableOpacity>
-            <TouchableOpacity className="px-4 py-2 bg-white rounded-full border border-gray-300">
-              <Text className="text-sm text-gray-700 font-sans">ประวัติแผนการเดินทาง</Text>
+
+            <TouchableOpacity
+              onPress={() => setTab("history")}
+              className={`rounded-full px-4 py-2 ${
+                tab === "history"
+                  ? "bg-orange-400"
+                  : "border border-gray-300 bg-white"
+              }`}
+            >
+              <Text
+                className={`text-sm font-medium font-sans ${
+                  tab === "history" ? "text-white" : "text-gray-700"
+                }`}
+              >
+                ประวัติการเดินทาง
+              </Text>
             </TouchableOpacity>
           </View>
 
-          {/* Content */}
-          {loadingPlans ? (
+          {loading ? (
             <View className="items-center justify-center py-10">
               <ActivityIndicator size="large" />
-              <Text className="text-gray-600 mt-3">กำลังโหลดแผนของคุณ...</Text>
+              <Text className="mt-3 font-medium font-sans text-gray-600">
+                กำลังโหลดแผนของคุณ...
+              </Text>
             </View>
-          ) : plans.length === 0 ? (
-            <EmptyState />
+          ) : tab === "current" ? (
+            renderCurrentPlans()
           ) : (
-            plans.map((plan) => (
-              <PlanCard
-                key={plan._id}
-                plan={plan}
-                onPress={() => router.push(`/trip/${plan._id}`)}
-                editable={false}
-              />
-            ))
+            renderHistoryPlans()
           )}
         </HomeScroll>
       </View>
+
+      <MovePlanModal
+        visible={modalOpen}
+        plan={selectedPlan}
+        onClose={() => {
+          setModalOpen(false);
+          loadAll();
+        }}
+      />
     </ImageBackground>
   );
 }

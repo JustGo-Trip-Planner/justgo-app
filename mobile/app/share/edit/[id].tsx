@@ -150,7 +150,7 @@ export default function EditGroupScreen() {
 
           {/* GROUP NAME */}
           <View className="bg-white rounded-3xl p-5 mb-5 shadow-sm">
-            <Text className="text-gray-500 mb-2 font-medium">
+            <Text className="text-xl font-semibold text-gray-900 mb-2">
               ชื่อกลุ่ม
             </Text>
 
@@ -166,11 +166,11 @@ export default function EditGroupScreen() {
           <View className="bg-white rounded-3xl p-5 mb-5 shadow-sm">
 
             <View className="flex-row items-center justify-between mb-4">
-              <Text className="font-semibold text-gray-900">
+              <Text className="text-xl font-semibold text-gray-900">
                 สมาชิกในกลุ่ม
               </Text>
 
-              <Text className="font-sans text-gray-500">
+              <Text className="font-medium text-gray-500">
                 {members.length} คน
               </Text>
             </View>
@@ -185,7 +185,7 @@ export default function EditGroupScreen() {
                   className="w-11 h-11 rounded-full"
                 />
 
-                <Text className="ml-3 flex-1 font-medium text-gray-800">
+                <Text className="text-lg ml-3 flex-1 font-medium text-gray-800">
                   {member.name}
                 </Text>
 
@@ -205,7 +205,7 @@ export default function EditGroupScreen() {
           <View className="bg-white rounded-3xl p-5 mb-5 shadow-sm">
             <View className="flex-row items-center justify-between mb-3">
 
-              <Text className="font-semibold text-gray-900">
+              <Text className="text-xl font-semibold text-gray-900">
                 วันหมดเขตโหวต
               </Text>
 
@@ -229,7 +229,7 @@ export default function EditGroupScreen() {
                 className="bg-gray-100 px-4 py-3 rounded-xl flex-row items-center justify-between"
               >
 
-                <Text className="text-gray-800">
+                <Text className="font-sans text-gray-800">
                   {deadline
                     ? deadline.toLocaleString("th-TH")
                     : "เลือกวันและเวลา"}

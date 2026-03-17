@@ -1,8 +1,17 @@
 import { Response } from "express";
 import mongoose from "mongoose";
-import GroupModel from "../models/groupModel";
 import { AuthRequest } from "../middlewares/auth";
+import { archiveTrip } from "../logic/groupTrip";
+
+import GroupModel from "../models/groupModel";
+import GroupTripHistoryModel from "../models/groupTripHistoryModel";
+import GroupPlanModel from "../models/groupPlanModel";
+import VoteModel from "../models/voteModel";
 import NotificationModel from "../models/notificationModel";
+
+function getParam(param: string | string[]): string {
+  return Array.isArray(param) ? param[0] : param;
+}
 
 export const createGroup = async (req: AuthRequest, res: Response) => {
   try {
@@ -14,13 +23,13 @@ export const createGroup = async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ message: "Group name is required" });
     }
 
-    if (!votingDeadline) {
-      return res.status(400).json({ message: "votingDeadline is required" });
-    }
+    let vd: Date | null = null;
 
-    const vd = new Date(votingDeadline);
-    if (isNaN(vd.getTime()) || vd.getTime() <= Date.now()) {
-      return res.status(400).json({ message: "Invalid votingDeadline" });
+    if (votingDeadline) {
+      const d = new Date(votingDeadline);
+      if (!isNaN(d.getTime())) {
+        vd = d;
+      }
     }
 
     // check duplicate members
@@ -45,6 +54,8 @@ export const createGroup = async (req: AuthRequest, res: Response) => {
       owner: req.userId,
       members: pendingMembers,
       votingDeadline: vd,
+      currentRound: 1,
+      tripStatus: "planning",
     });
 
     // notify all pending members
@@ -70,6 +81,7 @@ export const createGroup = async (req: AuthRequest, res: Response) => {
 export const getMyGroups = async (req: AuthRequest, res: Response) => {
   try {
     if (!req.userId) return res.status(401).json({ message: "Unauthorized" });
+
     const uid = req.userId;
 
     const groups = await GroupModel.find({
@@ -78,11 +90,66 @@ export const getMyGroups = async (req: AuthRequest, res: Response) => {
         { members: { $elemMatch: { userId: uid, status: "accepted" } } },
       ],
     })
-    .populate("finalizedPlanId")
-    .sort({ createdAt: -1 });
+      .populate("finalizedPlanId")
+      .sort({ createdAt: -1 });
 
-    res.json(groups);
-  } catch (error) {
+    const result = [];
+
+    for (const g of groups) {
+
+      await archiveTrip(String(g._id));
+
+      const acceptedMembers = (g.members ?? []).filter(
+        (m: any) => m.status === "accepted"
+      );
+
+      const eligibleUserIds = [
+        String(g.owner),
+        ...acceptedMembers.map((m: any) => String(m.userId)),
+      ];
+
+      const submissions = await GroupPlanModel.find({
+        groupId: g._id,
+        round: g.currentRound,
+      }).lean();
+
+      const planIds = submissions.map((s: any) =>
+        String(s.planId)
+      );
+
+      const votes = await VoteModel.find({
+        groupId: g._id,
+        round: g.currentRound,
+      }).lean();
+
+      const votedSet = new Set(
+        votes.map((v: any) => `${v.userId}:${v.planId}`)
+      );
+
+      let completedVoters = 0;
+
+      for (const uid of eligibleUserIds) {
+
+        const votedCount = planIds.filter((pid) =>
+          votedSet.has(`${uid}:${pid}`)
+        ).length;
+
+        if (planIds.length > 0 && votedCount === planIds.length) {
+          completedVoters++;
+        }
+      }
+
+      result.push({
+        ...g.toObject(),
+        voteProgress: {
+          voted: completedVoters,
+          total: eligibleUserIds.length,
+        },
+      });
+    }
+
+    res.json(result);
+  } catch {
     res.status(500).json({ message: "Load groups failed" });
   }
 };
@@ -91,7 +158,8 @@ export const getGroupById = async (req: AuthRequest, res: Response) => {
   try {
     if (!req.userId) return res.status(401).json({ message: "Unauthorized" });
 
-    const { id } = req.params;
+    const id  = getParam(req.params.id)
+    await archiveTrip(id);
 
     const group = await GroupModel.findById(id)
       .populate("owner", "first_name avatar")
@@ -102,8 +170,15 @@ export const getGroupById = async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ message: "Group not found" });
     }
 
-    res.json(group);
-  } catch (error) {
+    const history = await GroupTripHistoryModel.find({ groupId: id })
+      .sort({ archivedAt: -1 })
+      .populate("finalizedPlanId");
+
+    res.json({
+      ...group.toObject(),
+      history,
+    });
+  } catch {
     res.status(500).json({ message: "Load group failed" });
   }
 };
@@ -111,33 +186,40 @@ export const getGroupById = async (req: AuthRequest, res: Response) => {
 // PUT /api/groups/:id
 export const updateGroup = async (req: AuthRequest, res: Response) => {
   try {
-    if (!req.userId)
-      return res.status(401).json({ message: "Unauthorized" });
+    if (!req.userId) return res.status(401).json({ message: "Unauthorized" });
 
     const { id } = req.params;
     const { name, members, votingDeadline } = req.body;
 
     const group = await GroupModel.findById(id);
-
     if (!group) return res.status(404).json({ message: "Group not found" });
 
     if (String(group.owner) !== String(req.userId)) {
       return res.status(403).json({ message: "Only owner can edit group" });
     }
 
-    if (name) {
+    if (name?.trim()) {
       group.name = name.trim();
     }
 
     if (members) {
-      group.members = members.map((m: any) => ({
-        userId: new mongoose.Types.ObjectId(m.userId),
-        name: m.name,
-        avatar: m.avatar ?? "",
-        status: "accepted"
-      }));
+      const existingMembers = group.members || [];
+      const newMembers = members.map((m: any) => {
+        const existing = existingMembers.find((em: any) => String(em.userId) === String(m.userId));
+
+        return {
+          userId: new mongoose.Types.ObjectId(m.userId),
+          name: m.name,
+          avatar: m.avatar ?? "",
+          status: existing?.status ?? "accepted",
+          invitedAt: existing?.invitedAt ?? new Date(),
+          acceptedAt: existing?.acceptedAt ?? new Date(),
+        };
+      });
+      group.members = newMembers;
     }
     group.votingDeadline = votingDeadline ? new Date(votingDeadline) : null;
+
     await group.save();
     return res.json(group);
   } catch (error) {
@@ -213,7 +295,6 @@ export const removeInviteMember = async (req: AuthRequest, res: Response) => {
     if (String(group.owner) !== String(req.userId))
       return res.status(403).json({ message: "Only owner can remove invite" });
 
-    // 🔥 ลบ member โดยตรง
     const result = await GroupModel.updateOne(
       {
         _id: groupId,
@@ -329,8 +410,103 @@ export const deleteGroup = async (req: AuthRequest, res: Response) => {
     }
 
     await GroupModel.deleteOne({ _id: id });
+    await GroupPlanModel.deleteMany({ groupId: id });
+    await VoteModel.deleteMany({ groupId: id });
+    await GroupTripHistoryModel.deleteMany({ groupId: id });
+    await NotificationModel.deleteMany({ groupId: id });
+
     return res.json({ success: true });
   } catch (e) {
     return res.status(500).json({ message: "Delete group failed", error: e });
+  }
+};
+
+export const getGroupTripHistory = async (req: AuthRequest, res: Response) => {
+  try {
+    if (!req.userId) return res.status(401).json({ message: "Unauthorized" });
+
+    const id = getParam(req.params.id)
+
+    const group = await GroupModel.findById(id);
+    if (!group) return res.status(404).json({ message: "Group not found" });
+
+    const isOwner = String(group.owner) === String(req.userId);
+    const isAccepted = group.members?.some(
+      (m: any) => String(m.userId) === String(req.userId) && m.status === "accepted"
+    );
+
+    if (!isOwner && !isAccepted) {
+      return res.status(403).json({ message: "Forbidden" });
+    }
+
+    await archiveTrip(id);
+
+    const history = await GroupTripHistoryModel.find({ groupId: id })
+      .sort({ archivedAt: -1 })
+      .populate("finalizedPlanId");
+
+    return res.json(history);
+  } catch (error) {
+    return res.status(500).json({ message: "Load group history failed", error });
+  }
+};
+
+export const moveTripToHistory = async (req: AuthRequest, res: Response) => {
+  try {
+    if (!req.userId) return res.status(401).json({message:"Unauthorized"})
+
+    const id = getParam(req.params.id)
+    const group = await GroupModel.findById(id).populate("finalizedPlanId")
+
+    if (!group) return res.status(404).json({message:"Group not found"})
+    if (!group.finalizedPlanId) return res.status(400).json({message:"No finalized trip"})
+
+    const plan: any = group.finalizedPlanId
+
+    const existingHistory = await GroupTripHistoryModel.findOne({
+      groupId: group._id,
+      round: group.currentRound
+    });
+
+    if (!existingHistory) {
+      await GroupTripHistoryModel.create({
+        groupId: group._id,
+        round: group.currentRound,
+        finalizedPlanId: plan._id,
+        planOwnerId: plan.user ?? null,
+        trip_title: plan.trip_title,
+        previewImage: plan.previewImage,
+        provinceName: plan.provinceName,
+        total_budget: plan.total_budget,
+        start_date: plan.start_date,
+        end_date: plan.end_date,
+        finalizedAt: group.finalizedAt,
+        archivedAt: new Date(),
+        archiveReason: "archived_by_owner"
+      });
+    }
+
+    await GroupPlanModel.deleteMany({
+      groupId: group._id,
+      round: group.currentRound
+    });
+
+    await VoteModel.deleteMany({
+      groupId: group._id,
+      round: group.currentRound
+    });
+
+    group.currentRound += 1;
+    group.finalizedPlanId = null;
+    group.finalizedAt = null;
+    group.votingDeadline = null;
+    group.votingClosed = false;
+    group.votingClosedReason = null;
+    group.tripStatus = "planning";
+
+    await group.save();
+    return res.json({ success: true, message: "Trip archived and group reset for new round" });
+  } catch (error) {
+    return res.status(500).json({ message: "Move trip to history failed", error });
   }
 };

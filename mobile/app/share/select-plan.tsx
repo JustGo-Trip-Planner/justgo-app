@@ -1,8 +1,21 @@
 import { useEffect, useMemo, useState } from "react";
-import { View, Text, Image, Pressable, ScrollView, ActivityIndicator, ImageBackground, Alert } from "react-native";
+import {
+  View,
+  Text,
+  ScrollView,
+  ActivityIndicator,
+  ImageBackground,
+  Alert,
+  Pressable,
+  Image,
+} from "react-native";
+
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import axios from "axios";
+
+import PlanSelectCard from "@/components/share/PlanSelect";
+import { isCurrentPlan } from "@/lib/formatDate";
 
 type Plan = {
   _id: string;
@@ -11,9 +24,11 @@ type Plan = {
   end_date: string;
   total_budget: number;
   previewImage?: string;
+  total_places?: number;
 };
 
 export default function SelectMyPlanScreen() {
+
   const router = useRouter();
   const { groupId } = useLocalSearchParams<{ groupId: string }>();
 
@@ -23,139 +38,207 @@ export default function SelectMyPlanScreen() {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    const run = async () => {
-      try {
-        setLoading(true);
-        const res = await axios.get<Plan[]>("/api/plan/me");
-        setPlans(Array.isArray(res.data) ? res.data : []);
 
-        if (groupId) {
-          const sp = await axios.get<{ myPlanId: string | null }>(`/api/groups/${groupId}/submit`);
-          if (sp.data?.myPlanId) setSelected(sp.data.myPlanId);
-        }
-      } catch (e) {
+    const run = async () => {
+
+      try {
+
+        setLoading(true);
+
+        const res = await axios.get<Plan[]>("/api/plan/me");
+
+        const rawPlans = Array.isArray(res.data) ? res.data : [];
+
+        setPlans(rawPlans);
+
+      } catch {
+
         setPlans([]);
+
       } finally {
+
         setLoading(false);
+
       }
+
     };
+
     run();
-  }, [groupId]);
+
+  }, []);
+
+  const currentPlans = useMemo(() => {
+    return plans.filter((plan) => isCurrentPlan(plan.end_date));
+  }, [plans]);
 
   const onConfirm = async () => {
+
     if (!groupId) return;
-    if (!selected) return Alert.alert("กรุณาเลือกแผนของคุณก่อน");
+
+    if (!selected) {
+      return Alert.alert("กรุณาเลือกแผนของคุณก่อน");
+    }
 
     try {
-      setSubmitting(true);
-      await axios.post(`/api/groups/${groupId}/submit`, { planId: selected });
-      Alert.alert("สำเร็จ", "ส่งแผนเข้ากลุ่มแล้ว");
-      router.back();
-    } catch (e: any) {
-      Alert.alert("ส่งแผนไม่สำเร็จ", e?.response?.data?.message || "ลองใหม่อีกครั้ง");
-    } finally {
-      setSubmitting(false);
-    }
-  };
 
-  const cardImg = (uri?: string) => {
-    const clean = (uri ?? "").trim();
-    return clean ? { uri: clean } : require("@/assets/images/default.png");
+      setSubmitting(true);
+
+      await axios.post(`/api/groups/${groupId}/submit`, {
+        planId: selected,
+      });
+
+      Alert.alert("สำเร็จ", "ส่งแผนเข้ากลุ่มแล้ว");
+
+      router.back();
+
+    } catch (e: any) {
+
+      Alert.alert(
+        "ส่งแผนไม่สำเร็จ",
+        e?.response?.data?.message || "ลองใหม่อีกครั้ง"
+      );
+
+    } finally {
+
+      setSubmitting(false);
+
+    }
+
   };
 
   return (
-    <ImageBackground source={require("@/assets/backgrounds/bg.png")} resizeMode="cover" className="flex-1">
-      <View className="flex-1 pt-14 px-5">
-        {/* Header */}
-        <View className="relative mb-4 h-12 justify-center">
+
+    <ImageBackground
+      source={require("@/assets/backgrounds/bg.png")}
+      resizeMode="cover"
+      className="flex-1"
+    >
+
+      <View className="flex-1 px-5 pt-14">
+
+        {/* HEADER */}
+
+        <View className="relative mb-5 h-12 justify-center">
+
           <Pressable
             onPress={() => router.back()}
-            style={{ position: "absolute", left: 0, zIndex: 10 }}
-            className="bg-white/80 p-2 rounded-full"
+            className="absolute left-0 rounded-full bg-white/80 p-2"
           >
             <Ionicons name="chevron-back" size={24} color="#111827" />
           </Pressable>
+
           <View className="items-center">
-            <Image source={require("@/assets/icons/logo.png")} className="h-8" resizeMode="contain" />
+            <Image
+              source={require("@/assets/icons/logo.png")}
+              resizeMode="contain"
+              className="h-8"
+            />
           </View>
+
         </View>
 
-        <View className="bg-white/60 rounded-3xl px-5 py-6 flex-1">
-          <Text className="text-2xl font-semibold text-gray-800">เลือกแผนของคุณ</Text>
-          <Text className="text-gray-600 mt-1 mb-4">เลือก 1 แผนเพื่อเข้าร่วมจัดอันดับในกลุ่ม</Text>
 
-          {loading ? (
-            <View className="flex-1 items-center justify-center">
-              <ActivityIndicator size="large" />
-            </View>
-          ) : plans.length === 0 ? (
-            <View className="flex-1 items-center justify-center">
-              <Ionicons name="map-outline" size={46} color="#94A3B8" />
-              <Text className="text-gray-600 mt-2">คุณยังไม่มีแผนของตัวเอง</Text>
-            </View>
-          ) : (
-            <ScrollView contentContainerStyle={{ paddingBottom: 80, gap: 12 }}>
-              {plans.map((p) => {
-                const active = selected === p._id;
-                return (
-                  <Pressable
-                    key={p._id}
-                    onPress={() => setSelected(p._id)}
-                    style={{
-                      backgroundColor: "white",
-                      borderRadius: 18,
-                      overflow: "hidden",
-                      borderWidth: 2,
-                      borderColor: active ? "#F97316" : "rgba(17,24,39,0.08)",
-                    }}
-                  >
-                    <View style={{ flexDirection: "row" }}>
-                      <Image source={cardImg(p.previewImage)} style={{ width: 110, height: 84 }} />
-                      <View style={{ flex: 1, padding: 10 }}>
-                        <Text numberOfLines={1} style={{ fontWeight: "800", color: "#111827" }}>
-                          {p.trip_title}
-                        </Text>
-                        <Text style={{ color: "#64748B", marginTop: 2, fontSize: 12 }}>
-                          {p.start_date} - {p.end_date}
-                        </Text>
-                        <Text style={{ color: "#0F172A", marginTop: 4, fontWeight: "700", fontSize: 12 }}>
-                          งบประมาณ ~ {p.total_budget?.toLocaleString("th-TH")} บาท
-                        </Text>
-                      </View>
+        {/* MAIN CARD */}
 
-                      <View style={{ width: 42, alignItems: "center", justifyContent: "center" }}>
-                        <Ionicons
-                          name={active ? "radio-button-on" : "radio-button-off"}
-                          size={22}
-                          color={active ? "#F97316" : "#94A3B8"}
-                        />
-                      </View>
-                    </View>
-                  </Pressable>
-                );
-              })}
-            </ScrollView>
-          )}
+        <View className="flex-1 rounded-3xl bg-white/80 px-5 py-6">
 
-          {/* Footer buttons */}
-          <View style={{ flexDirection: "row", gap: 12, marginTop: 10 }}>
-            <Pressable
-              onPress={() => router.back()}
-              style={{ flex: 1, paddingVertical: 14, borderRadius: 14, backgroundColor: "rgba(148,163,184,0.25)", alignItems: "center" }}
-            >
-              <Text style={{ color: "#334155", fontWeight: "800" }}>ยกเลิก</Text>
-            </Pressable>
+          {/* TITLE */}
 
-            <Pressable
-              onPress={onConfirm}
-              disabled={submitting}
-              style={{ flex: 1, paddingVertical: 14, borderRadius: 14, backgroundColor: "#F97316", alignItems: "center", opacity: submitting ? 0.7 : 1 }}
-            >
-              {submitting ? <ActivityIndicator color="white" /> : <Text style={{ color: "white", fontWeight: "800" }}>ยืนยัน</Text>}
-            </Pressable>
+          <Text className="font-semibold font-sans text-2xl text-gray-800">
+            เลือกแผนของคุณ
+          </Text>
+
+          <Text className="mt-1 font-medium font-sans text-sm text-gray-600">
+            เลือก 1 แผนปัจจุบันเพื่อส่งเข้ากลุ่ม
+          </Text>
+
+
+          {/* PLAN LIST */}
+
+          <View className="mt-5 flex-1">
+
+            {loading ? (
+
+              <View className="flex-1 items-center justify-center">
+
+                <ActivityIndicator size="large" />
+
+                <Text className="mt-3 font-medium font-sans text-gray-600">
+                  กำลังโหลดแผนของคุณ...
+                </Text>
+
+              </View>
+
+            ) : (
+
+              <ScrollView
+                showsVerticalScrollIndicator={false}
+                contentContainerStyle={{ paddingBottom: 20 }}
+              >
+
+                {currentPlans.map((plan) => {
+
+                  const active = selected === plan._id;
+
+                  return (
+
+                    <PlanSelectCard
+                      key={plan._id}
+                      plan={plan}
+                      active={active}
+                      onPress={() =>
+                        setSelected(prev =>
+                          prev === plan._id ? null : plan._id
+                        )
+                      }
+                    />
+
+                  );
+
+                })}
+
+              </ScrollView>
+
+            )}
+
           </View>
+
         </View>
+
+
+        {/* FOOTER CONFIRM */}
+
+        <View className="pt-4 pb-6">
+
+          <Pressable
+            onPress={onConfirm}
+            disabled={!selected || submitting}
+            className={`items-center rounded-full py-4 ${
+              !selected || submitting
+                ? "bg-white/50"
+                : "bg-orange-500"
+            }`}
+          >
+
+            {submitting ? (
+
+              <ActivityIndicator color="white" />
+
+            ) : (
+
+              <Text className="font-semibold font-sans text-base text-white">
+                ยืนยันแผน
+              </Text>
+
+            )}
+
+          </Pressable>
+
+        </View>
+
       </View>
+
     </ImageBackground>
+
   );
 }

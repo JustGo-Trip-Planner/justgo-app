@@ -57,7 +57,7 @@ export default function GroupCard({
   return (
 
     <View className="
-      bg-white
+      bg-white/90
       border border-gray-100
       rounded-3xl
       p-5

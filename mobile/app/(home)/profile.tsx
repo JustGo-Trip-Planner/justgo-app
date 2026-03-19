@@ -30,7 +30,9 @@ export default function ProfileScreen() {
     {
       title: "รูปแบบการเดินทาง",
       icon: "heart-outline",
-      onPress: () => {},
+      onPress: () => {
+        router.push("/profile/preference");
+      },
     },
     {
       title: "ภาษา",
@@ -92,12 +94,7 @@ export default function ProfileScreen() {
                 {item.title}
               </Text>
 
-              <Ionicons
-                name="chevron-forward"
-                size={18}
-                color="#bbb"
-                className="ml-auto"
-              />
+              <Ionicons name="chevron-forward" size={18} color="#bbb" className="ml-auto" />
             </TouchableOpacity>
           ))}
         </View>

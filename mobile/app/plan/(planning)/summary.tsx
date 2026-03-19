@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   View,
   Text,
@@ -10,6 +10,8 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import { GeneratedPlan, usePlan } from "@/context/PlanContext";
+import { interestGroups } from "@/constants/interestData";
+import { activityGroups } from "@/constants/activityData";
 import { Ionicons } from "@expo/vector-icons";
 import axios from "axios";
 import Constants from "expo-constants";
@@ -31,43 +33,75 @@ export default function SummaryPage() {
     }
   }, [plan]);
 
-const createPlan = async () => {
-  try {
-    router.push("/plan/(preview)/loading");
+  const createPlan = async () => {
+    try {
+      router.push("/plan/(preview)/loading");
 
-    const API_URL = Constants.expoConfig?.extra?.API_URL;
-    const res = await axios.post(`${API_URL}/api/plan/generate`, {
-      province_id: plan.province,
-      province_name: plan.provinceName,
-      start_date: plan.startDate,
-      end_date: plan.endDate,
-      group_type: plan.groupType,
-      friend_count: plan.friendCount,
-      family: plan.family,
-      interests: plan.interests,
-      activities: plan.activities,
-      budget_type: plan.budgetType,
-      budget_amount: plan.budgetAmount,
-      num_plans: numPlans,
+      const API_URL = Constants.expoConfig?.extra?.API_URL;
+      const res = await axios.post<any>(`${API_URL}/api/plan/generate`, {
+        province_id: plan.province,
+        province_name: plan.provinceName,
+        start_date: plan.startDate,
+        end_date: plan.endDate,
+        group_type: plan.groupType,
+        friend_count: plan.friendCount,
+        family: plan.family,
+        interests: plan.interests,
+        activities: plan.activities,
+        budget_type: plan.budgetType,
+        budget_amount: plan.budgetAmount,
+        num_plans: numPlans,
+      });
+
+      const data = res.data.plans.map((p: GeneratedPlan) => ({
+        ...p,
+        previewImage: plan.image, 
+      }));
+      setPlans(data);
+
+      console.log("Generated plans:", data);
+      
+      router.replace("/plan/result");
+    } catch (error) {
+      console.error("Error generating plans:", error);
+      router.back();
+      setTimeout(() => {
+        alert("เกิดข้อผิดพลาดในการสร้างแผนการเดินทาง กรุณาลองใหม่อีกครั้ง");
+      }, 500);
+    }
+  };
+
+  const interestMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    interestGroups.forEach((g) => {
+      g.items.forEach((i) => {
+        map[i.id] = i.label;
+      });
     });
+    return map;
+  }, []);
 
-    const data = res.data.plans.map((p: GeneratedPlan) => ({
-      ...p,
-      previewImage: plan.image, 
-    }));
-    setPlans(data);
+  const activityMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    activityGroups.forEach((g) => {
+      g.items.forEach((i) => {
+        map[i.id] = i.label;
+      });
+    });
+    return map;
+  }, []);
 
-    console.log("Generated plans:", data);
-    
-    router.replace("/plan/result");
-  } catch (error) {
-    console.error("Error generating plans:", error);
-    router.back();
-    setTimeout(() => {
-      alert("เกิดข้อผิดพลาดในการสร้างแผนการเดินทาง กรุณาลองใหม่อีกครั้ง");
-    }, 500);
-  }
-};
+    const interestLabels = useMemo(() => {
+    return (plan.interests || []).map(
+      (id: string) => interestMap[id] || id
+    );
+  }, [plan.interests, interestMap]);
+
+  const activityLabels = useMemo(() => {
+    return (plan.activities || []).map(
+      (id: string) => activityMap[id] || id
+    );
+  }, [plan.activities, activityMap]);
 
   const renderGroupDetail = () => {
     if (plan.groupType === "เพื่อน" && plan.friendCount) {
@@ -173,16 +207,16 @@ const createPlan = async () => {
               <View className="flex-row items-center mb-2">
                 <Ionicons name="star-outline" size={24} />
                 <Text className="ml-2 font-semibold text-lg">
-                  ความสนใจ {plan.interests.length} อย่าง
+                  ความสนใจ {interestLabels.length} อย่าง
                 </Text>
               </View>
               <View className="flex-row flex-wrap gap-2 ml-9">
-                {plan.interests.map((i) => (
+                {interestLabels.map((label, idx) => (
                   <View
-                  key={i}
+                  key={idx}
                   className="px-3 py-1 rounded-full bg-white border border-gray-300"
                   >
-                    <Text className="text-sm font-sans">{i}</Text>
+                    <Text className="text-sm font-sans">{label}</Text>
                   </View>
                 ))}
               </View>
@@ -193,16 +227,16 @@ const createPlan = async () => {
               <View className="flex-row items-center mb-2">
                 <Ionicons name="bicycle-outline" size={24} />
                 <Text className="ml-2 font-semibold text-lg">
-                  กิจกรรมที่เลือก {plan.activities.length} อย่าง
+                  กิจกรรมที่เลือก {activityLabels.length} อย่าง
                 </Text>
               </View>
               <View className="flex-row flex-wrap gap-2 ml-9">
-                {plan.activities.map((a) => (
+                {activityLabels.map((label, idx) => (
                   <View
-                  key={a}
+                  key={idx}
                   className="px-3 py-1 rounded-full bg-white border border-gray-300"
                   >
-                    <Text className="text-sm font-sans">{a}</Text>
+                    <Text className="text-sm font-sans">{label}</Text>
                   </View>
                 ))}
               </View>

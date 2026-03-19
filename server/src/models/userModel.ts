@@ -9,8 +9,10 @@ const userSchema = new mongoose.Schema({
   gender: String,
   phone: String,
   avatar: String,
-  interest: [String],
-  activity: [String],
+
+  interests: { type: [String], default: [] },
+  activities: { type: [String], default: [] },
+
   created_at: { type: Date, default: Date.now },
   updated_at: { type: Date, default: Date.now },
 });

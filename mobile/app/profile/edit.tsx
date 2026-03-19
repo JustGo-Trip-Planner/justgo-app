@@ -1,43 +1,44 @@
 import { useState, useEffect } from "react";
 import {
-  View, Text, TextInput, TouchableOpacity,
-  Image, ScrollView, Alert, Platform, Modal
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  ScrollView,
+  Alert,
+  Platform,
+  Modal,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
 import Constants from "expo-constants";
 import axios from "axios";
+
 import DateTimePicker from "@react-native-community/datetimepicker";
 import CountryPicker from "react-native-country-picker-modal";
-import * as ImageManipulator from "expo-image-manipulator";
 import { parsePhoneNumberFromString } from "libphonenumber-js";
 
 import { useAuth } from "@/context/AuthContext";
-
-type CloudinarySignature = {
-  timestamp: number;
-  signature: string;
-  apiKey: string;
-  cloudName: string;
-  public_id: string;
-};
+import AvatarPicker from "@/components/avatar/AvatarPicker";
+import { pickAvatar, processAvatar } from "@/components/avatar/upload";
 
 export default function EditProfileScreen() {
   const { user, token, login } = useAuth();
   const router = useRouter();
   const API_URL = Constants.expoConfig?.extra?.API_URL;
-  
+
   const [loading, setLoading] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
   const [avatar, setAvatar] = useState("");
+
   const [showGenderModal, setShowGenderModal] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
-  const [birthDateDisplay, setBirthDateDisplay] = useState("");
 
   const [countryCode, setCountryCode] = useState("TH");
   const [callingCode, setCallingCode] = useState("66");
 
   const [form, setForm] = useState({
+    email: "",
     first_name: "",
     last_name: "",
     gender: "",
@@ -45,136 +46,70 @@ export default function EditProfileScreen() {
     phone: "",
   });
 
+  const [originalForm, setOriginalForm] = useState(form);
+  const [birthDateDisplay, setBirthDateDisplay] = useState("");
+
+  // ---------------- INIT ----------------
   useEffect(() => {
-    if (user) {
-      setAvatar(user.avatar || "");
+    if (!user) return;
 
-      let localPhone = "";
-      let code = "66";
-      let country = "TH";
+    setAvatar(user.avatar || "");
 
-      if (user.phone) {
-        const parsed = parsePhoneNumberFromString(user.phone);
+    let localPhone = "";
+    let code = "66";
+    let country = "TH";
 
-        if (parsed) {
-          localPhone = parsed.nationalNumber;
-          code = parsed.countryCallingCode;
-          country = parsed.country || "TH";
-        }
+    if (user.phone) {
+      const parsed = parsePhoneNumberFromString(user.phone);
+      if (parsed) {
+        localPhone = parsed.nationalNumber;
+        code = parsed.countryCallingCode;
+        country = parsed.country || "TH";
       }
-
-      setCountryCode(country);
-      setCallingCode(code);
-
-      setForm({
-        first_name: user.first_name || "",
-        last_name: user.last_name || "",
-        gender: user.gender || "",
-        birth_date: user.birth_date?.split("T")[0] || "",
-        phone: localPhone,
-      });
-
-      setBirthDateDisplay(formatDate(user.birth_date));
     }
+
+    const initial = {
+      email: user.email || "",
+      first_name: user.first_name || "",
+      last_name: user.last_name || "",
+      gender: user.gender || "",
+      birth_date: user.birth_date?.split("T")[0] || "",
+      phone: localPhone,
+    };
+
+    setForm(initial);
+    setOriginalForm(initial);
+
+    setCountryCode(country);
+    setCallingCode(code);
+
+    setBirthDateDisplay(formatDate(user.birth_date));
   }, [user]);
 
   const formatDate = (dateStr?: string) => {
-      if (!dateStr) return "";
-      const date = new Date(dateStr);
-      return date.toLocaleDateString("en-GB"); 
-    };
-
-  const pickImage = async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 1,
-    });
-
-    if (!result.canceled) {
-      let uri = result.assets[0].uri;
-      uri = await compressImage(uri);
-      setAvatar(uri);
-    }
+    if (!dateStr) return "";
+    return new Date(dateStr).toLocaleDateString("en-GB");
   };
 
-  const compressImage = async (uri: string) => {
-    const result = await ImageManipulator.manipulateAsync(
-      uri,
-      [
-        { resize: { width: 500 } },
-      ],
-      {
-        compress: 0.7,
-        format: ImageManipulator.SaveFormat.JPEG,
-      }
-    );
-
-    return result.uri;
+  // ---------------- ACTIONS ----------------
+  const handlePickAvatar = async () => {
+    if (!isEditing) return;
+    const uri = await pickAvatar();
+    if (uri) setAvatar(uri);
   };
 
-  const getSignature = async (): Promise<CloudinarySignature> => {
-    const res = await axios.get<CloudinarySignature>(
-      `${API_URL}/api/uploads/signature?userId=${user?.id}`
-    );
-    return res.data;
-  };
-
-  const uploadToCloudinary = async (imageUri: string) => {
-    const { timestamp, signature, apiKey, cloudName, public_id } =
-      await getSignature();
-
-    const data = new FormData();
-
-    const filename = imageUri.split("/").pop() || "avatar.jpg";
-
-    data.append("file", {
-      uri: imageUri,
-      name: filename,
-      type: "image/jpeg",
-    } as any);
-
-    data.append("api_key", apiKey);
-    data.append("timestamp", String(timestamp));
-    data.append("signature", signature);
-
-    data.append("folder", "justgo/avatar");
-    data.append("public_id", public_id);
-    data.append("overwrite", "true");
-
-    const res = await fetch(
-      `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
-      {
-        method: "POST",
-        body: data,
-      }
-    );
-
-    const json = await res.json();
-
-    if (!json.secure_url) {
-      console.error(json);
-      throw new Error("Upload failed");
-    }
-
-    return json.secure_url;
+  const handleCancel = () => {
+    setForm(originalForm);
+    setIsEditing(false);
   };
 
   const handleUpdate = async () => {
-    try {
-      if (!user?.id) {
-        Alert.alert("Error", "User not found");
-        return;
-      }
+    if (loading) return;
 
+    try {
       setLoading(true);
 
-      let avatarUrl = avatar;
-
-      if (avatar && !avatar.startsWith("http")) {
-        avatarUrl = await uploadToCloudinary(avatar);
-      }
+      const avatarUrl = await processAvatar(avatar, user.id);
 
       const phoneNumber = parsePhoneNumberFromString(
         form.phone,
@@ -183,27 +118,29 @@ export default function EditProfileScreen() {
 
       if (!phoneNumber || !phoneNumber.isValid()) {
         Alert.alert("เบอร์ไม่ถูกต้อง");
+        setLoading(false);
         return;
       }
 
-      const res = await axios.put<any>(
+      const { email, ...safeForm } = form;
+
+      const res = await axios.put(
         `${API_URL}/api/users/${user.id}`,
         {
-          ...form,
+          ...safeForm,
           avatar: avatarUrl,
           phone: phoneNumber.number,
         },
         {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+          headers: { Authorization: `Bearer ${token}` },
         }
       );
 
-      await login(token!, {
-        ...res.data.user,
-        id: res.data.user._id,
-      }, true);
+      await login(
+        token!,
+        { ...res.data.user, id: res.data.user._id },
+        true
+      );
 
       Alert.alert("สำเร็จ", "อัปเดตเรียบร้อย");
       router.back();
@@ -215,121 +152,181 @@ export default function EditProfileScreen() {
     }
   };
 
+  const fieldContainer = (editable: boolean) =>
+    `flex-row items-center px-4 py-3 rounded-xl ${
+      editable ? "bg-white border border-gray-200" : "bg-gray-100"
+    }`;
+
   return (
-    <ScrollView className="flex-1 bg-gray-50 px-4 pt-12">
+    <View className="flex-1 bg-gray-50">
 
-      {/* HEADER */}
-      <View className="flex-row items-center mb-6">
-        <TouchableOpacity onPress={() => router.back()}>
-          <Ionicons name="chevron-back" size={26} />
-        </TouchableOpacity>
+      <ScrollView 
+        className="px-5 pt-12" 
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{
+          paddingBottom: 20,
+        }}
+      >
 
-        <Text className="ml-4 text-lg font-semibold">
-          แก้ไขโปรไฟล์
-        </Text>
-      </View>
+        {/* HEADER */}
+        <View className="flex-row justify-between items-center mb-6">
+          <TouchableOpacity onPress={() => router.back()}>
+            <Ionicons name="chevron-back" size={26} />
+          </TouchableOpacity>
 
-      {/* AVATAR */}
-      <View className="items-center mb-6">
-        <TouchableOpacity onPress={pickImage}>
-          <Image
-            source={
-              avatar
-                ? { uri: avatar }
-                : require("@/assets/images/avatar.png")
-            }
-            className="w-28 h-28 rounded-full"
-          />
+          <Text className="text-xl font-semibold">จัดการโปรไฟล์</Text>
 
-          <View className="absolute bottom-0 right-0 bg-black p-2 rounded-full">
-            <Ionicons name="camera-outline" size={14} color="white" />
-          </View>
-        </TouchableOpacity>
-      </View>
-
-      {/* CARD */}
-      <View className="bg-white rounded-2xl p-4 shadow-sm">
-
-        {/* FIRST NAME */}
-        <Input
-          label="Name"
-          value={form.first_name}
-          onChange={(v) => setForm({ ...form, first_name: v })}
-        />
-
-        {/* LAST NAME */}
-        <Input
-          label="Last Name"
-          value={form.last_name}
-          onChange={(v) => setForm({ ...form, last_name: v })}
-        />
-
-        {/* GENDER */}
-        <TouchableOpacity
-          onPress={() => setShowGenderModal(true)}
-          className="mb-4"
-        >
-          <Text className="text-gray-500 mb-1">Gender</Text>
-          <View className="border border-gray-300 rounded-xl px-4 py-3 flex-row justify-between items-center">
-            <Text className={form.gender ? "text-black" : "text-gray-400"}>
-              {form.gender || "Select gender"}
-            </Text>
-            <Ionicons name="chevron-down" size={16} color="#999" />
-          </View>
-        </TouchableOpacity>
-
-        {/* DOB */}
-        <TouchableOpacity
-          onPress={() => setShowDatePicker(true)}
-          className="mb-4"
-        >
-          <Text className="text-gray-500 mb-1">Date of Birth</Text>
-          <View className="border border-gray-300 rounded-xl px-4 py-3">
-            <Text className={birthDateDisplay ? "text-black" : "text-gray-400"}>
-              {birthDateDisplay || "Select date"}
-            </Text>
-          </View>
-        </TouchableOpacity>
-
-        {/* PHONE */}
-        <Text className="text-gray-500 mb-1">Phone Number</Text>
-        <View className="flex-row items-center gap-2 mb-4">
-
-          <View className="flex-row items-center border border-gray-300 rounded-xl px-3 py-2 bg-white">
-            <CountryPicker
-              countryCode={countryCode as any}
-              withFlag
-              withCallingCode
-              onSelect={(c) => {
-                setCountryCode(c.cca2);
-                setCallingCode(c.callingCode[0]);
-              }}
-            />
-            <Text className="ml-1">+{callingCode}</Text>
-          </View>
-
-          <TextInput
-            value={form.phone}
-            keyboardType="phone-pad"
-            onChangeText={(v) => setForm({ ...form, phone: v })}
-            className="flex-1 border border-gray-300 rounded-xl px-4 py-3"
-          />
+          {!isEditing ? (
+            <TouchableOpacity onPress={() => setIsEditing(true)}>
+              <Ionicons name="create-outline" size={24} />
+            </TouchableOpacity>
+          ) : (
+            <View style={{ width: 22 }} />
+          )}
         </View>
 
-      </View>
+        {/* AVATAR */}
+        <View className="items-center mb-6">
+          <AvatarPicker avatar={avatar} onPick={handlePickAvatar} />
+          {isEditing && (
+            <Text className="text-sm font-sans text-gray-500">
+              แตะเพื่อเปลี่ยนรูป
+            </Text>
+          )}
+        </View>
 
-      {/* SAVE */}
-      <TouchableOpacity
-        disabled={loading}
-        onPress={handleUpdate}
-        className={`py-4 rounded-xl mt-6 items-center ${
-          loading ? "bg-gray-400" : "bg-sky-700"
-        }`}
-      >
-        <Text className="text-white font-semibold">
-          {loading ? "กำลังอัปโหลด..." : "บันทึก"}
-        </Text>
-      </TouchableOpacity>
+        {/* FLOATING CARD */}
+        <View className="bg-white rounded-3xl px-5 py-6 shadow-md">
+
+          {/* EMAIL */}
+          <View className="mb-5">
+            <Text className="font-sans text-gray-400 mb-1">อีเมล</Text>
+            <View className="flex-row items-center bg-gray-100 px-4 py-3 rounded-xl">
+              <Ionicons name="mail-outline" size={16} color="#9CA3AF" />
+              <Text className="ml-2 flex-1 font-sans">
+                {form.email}
+              </Text>
+              <Ionicons name="lock-closed-outline" size={14} color="#9CA3AF" />
+            </View>
+          </View>
+
+          {/* FIRST NAME */}
+          <Field
+            label="ชื่อจริง"
+            icon="person-outline"
+            value={form.first_name}
+            editable={isEditing}
+            onChange={(v) => setForm({ ...form, first_name: v })}
+          />
+
+          {/* LAST NAME */}
+          <Field
+            label="นามสกุล"
+            icon="person-outline"
+            value={form.last_name}
+            editable={isEditing}
+            onChange={(v) => setForm({ ...form, last_name: v })}
+          />
+
+          <View className="flex-row gap-3 mb-5">
+
+            {/* GENDER */}
+            <TouchableOpacity
+              disabled={!isEditing}
+              onPress={() => setShowGenderModal(true)}
+              className="flex-1"
+            >
+              <Text className="font-sans text-gray-400 mb-1">เพศ</Text>
+
+              <View className={fieldContainer(isEditing)}>
+                <Ionicons name="male-female-outline" size={16} color="#9CA3AF" />
+
+                <Text className="ml-2 font-sans flex-1">
+                  {form.gender || "เลือกเพศ"}
+                </Text>
+
+                {isEditing && (
+                  <Ionicons name="chevron-down" size={16} color="#9CA3AF" />
+                )}
+              </View>
+            </TouchableOpacity>
+
+            {/* BIRTH DATE */}
+            <TouchableOpacity
+              disabled={!isEditing}
+              onPress={() => setShowDatePicker(true)}
+              className="flex-1"
+            >
+              <Text className="font-sans text-gray-400 mb-1">วันเกิด</Text>
+
+              <View className={fieldContainer(isEditing)}>
+                <Ionicons name="calendar-outline" size={16} color="#9CA3AF" />
+
+                <Text className="ml-2 font-sans flex-1">
+                  {birthDateDisplay || "เลือกวันเกิด"}
+                </Text>
+              </View>
+            </TouchableOpacity>
+
+          </View>
+
+          {/* PHONE */}
+          <View className="mb-2">
+            <Text className="font-sans text-gray-400 mb-1">เบอร์โทร</Text>
+            <View className="flex-row gap-2">
+              <View className={fieldContainer(isEditing)}>
+                <CountryPicker
+                  countryCode={countryCode as any}
+                  withFlag
+                  withCallingCode
+                  onSelect={(c) => {
+                    if (!isEditing) return;
+                    setCountryCode(c.cca2);
+                    setCallingCode(c.callingCode[0]);
+                  }}
+                />
+                <Text>+{callingCode}</Text>
+              </View>
+
+              <TextInput
+                value={form.phone}
+                editable={isEditing}
+                onChangeText={(v) => setForm({ ...form, phone: v })}
+                className={`flex-1 font-sans text-lg rounded-xl px-4 py-3 ${
+                  isEditing
+                    ? "bg-white border border-gray-200"
+                    : "bg-gray-100"
+                }`}
+              />
+            </View>
+          </View>
+        </View>
+
+        {/* ACTIONS */}
+        {isEditing && (
+          <View className="flex-row gap-3 mt-6 mb-10">
+            <TouchableOpacity
+              onPress={handleCancel}
+              className="flex-1 py-4 rounded-xl bg-gray-200 items-center"
+            >
+              <Text className="font-medium">ยกเลิก</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={handleUpdate}
+              disabled={loading}
+              className={`flex-1 py-4 rounded-xl items-center ${
+                loading ? "bg-gray-400" : "bg-sky-700"
+              }`}
+            >
+              <Text className="text-white font-medium">
+                {loading ? "กำลังบันทึก..." : "บันทึก"}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+      </ScrollView>
 
       {/* DATE PICKER */}
       {showDatePicker && (
@@ -337,27 +334,24 @@ export default function EditProfileScreen() {
           value={new Date()}
           mode="date"
           display={Platform.OS === "ios" ? "spinner" : "default"}
-          onChange={(e, date) => {
+          onChange={(_, date) => {
             setShowDatePicker(false);
             if (date) {
               const iso = date.toISOString().split("T")[0];
-              setForm({
-                ...form,
-                birth_date: iso,
-              });
-              setBirthDateDisplay(formatDate(date.toISOString()));
+              setForm({ ...form, birth_date: iso });
+              setBirthDateDisplay(formatDate(iso));
             }
           }}
         />
       )}
 
+      {/* GENDER MODAL */}
       <Modal visible={showGenderModal} transparent animationType="fade">
         <TouchableOpacity
           className="flex-1 bg-black/40 justify-center items-center"
           onPress={() => setShowGenderModal(false)}
         >
           <View className="bg-white w-72 rounded-2xl p-4">
-
             {["ชาย", "หญิง", "อื่นๆ"].map((g) => (
               <TouchableOpacity
                 key={g}
@@ -367,34 +361,37 @@ export default function EditProfileScreen() {
                 }}
                 className="py-3 border-b border-gray-100"
               >
-                <Text className="text-center text-base">{g}</Text>
+                <Text className="text-center font-sans">{g}</Text>
               </TouchableOpacity>
             ))}
-
           </View>
         </TouchableOpacity>
       </Modal>
-    </ScrollView>
+    </View>
   );
 }
 
-function Input({
+function Field({
   label,
+  icon,
   value,
+  editable,
   onChange,
-}: {
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-}) {
+}: any) {
   return (
-    <View className="mb-4">
-      <Text className="text-gray-500 mb-1">{label}</Text>
-      <TextInput
-        value={value}
-        onChangeText={onChange}
-        className="border border-gray-300 rounded-xl px-4 py-3"
-      />
+    <View className="mb-5">
+      <Text className="font-sans text-gray-400 mb-1">{label}</Text>
+      <View className={`flex-row items-center px-4 py-0.5 rounded-xl ${
+        editable ? "bg-white border border-gray-200" : "bg-gray-100"
+      }`}>
+        <Ionicons name={icon} size={16} color="#9CA3AF" />
+        <TextInput
+          value={value}
+          editable={editable}
+          onChangeText={onChange}
+          className="ml-2 font-sans flex-1"
+        />
+      </View>
     </View>
   );
 }

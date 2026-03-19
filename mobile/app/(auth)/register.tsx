@@ -2,42 +2,63 @@ import { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, Image, ImageBackground } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import axios from 'axios';
 import Constants from 'expo-constants';
+import axios from "axios";
 import { useAuth } from '@/context/AuthContext';
 import { ScrollView } from 'react-native-gesture-handler';
 
 export default function RegisterScreen() {
-  const { login } = useAuth();
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const API_URL = Constants.expoConfig?.extra?.API_URL;
 
+  const validateEmail = (email: string) => {
+    return /\S+@\S+\.\S+/.test(email);
+  };
+
   const handleRegister = async () => {
-    if (!email || !password || !confirm) return alert('กรุณากรอกข้อมูลให้ครบ');
-    if (password !== confirm) return alert('รหัสผ่านไม่ตรงกัน');
+    if (!email || !password || !confirm) {
+      return alert("กรุณากรอกข้อมูลให้ครบ");
+    }
+
+    if (!validateEmail(email)) {
+      return alert("รูปแบบอีเมลไม่ถูกต้อง");
+    }
+
+    if (password !== confirm) {
+      return alert("รหัสผ่านไม่ตรงกัน");
+    }
 
     try {
-      const res = await axios.post(`${API_URL}/api/auth/register`, {
-        email,
-        password,
-      });
+      setLoading(true);
 
-      const { user, token } = res.data;
-      await login(token, user, true);
+      const res = await axios.post<any>(
+        `${API_URL}/api/auth/check-email`,
+        { email }
+      );
+
+      if (res.data.exists) {
+        return alert("อีเมลนี้ถูกใช้ไปแล้ว");
+      }
 
       router.push({
-        pathname: '/(auth)/create-profile',
-        params: { userId: user.id },
+        pathname: "/(auth)/create-profile",
+        params: { email, password },
       });
     } catch (err: any) {
-      console.error('Register failed:', err);
-      alert(err.response?.data?.message || 'สมัครสมาชิกไม่สำเร็จ');
+      if (err.response?.status === 500) {
+        alert("เซิร์ฟเวอร์มีปัญหา");
+      } else {
+        alert("เกิดข้อผิดพลาด");
+      }
+    } finally {
+      setLoading(false);
     }
   };
 

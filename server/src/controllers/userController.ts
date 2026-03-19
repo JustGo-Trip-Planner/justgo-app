@@ -55,10 +55,19 @@ export const updateUser = async (req: Request, res: Response) => {
       }
     }
 
+    const { first_name, last_name, gender, birth_date, phone, avatar } = req.body;
+    
+    if (req.body.email) return res.status(400).json({ message: "Email cannot be changed" });
+    
     const updatedUser = await UserModel.findByIdAndUpdate(
       id,
       {
-        ...req.body,
+        first_name,
+        last_name,
+        gender,
+        birth_date,
+        phone,
+        avatar,
         updated_at: new Date(),
       },
       { new: true }

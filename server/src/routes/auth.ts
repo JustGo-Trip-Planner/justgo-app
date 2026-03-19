@@ -29,6 +29,11 @@ router.post('/login', async (req, res) => {
         first_name: user.first_name,
         last_name: user.last_name,
         avatar: user.avatar,
+        gender: user.gender,
+        birth_date: user.birth_date,
+        phone: user.phone,
+        interests: user.interests,
+        activities: user.activities,
       },
     });
   } catch (err) {
@@ -49,6 +54,16 @@ router.post('/register', async (req, res) => {
     const newUser = await User.create({
       email,
       password_hash: hashed,
+
+      first_name: req.body.first_name,
+      last_name: req.body.last_name,
+      gender: req.body.gender,
+      birth_date: req.body.birth_date,
+      phone: req.body.phone,
+      avatar: req.body.avatar,
+      interests: req.body.interests,
+      activities: req.body.activities,
+
       created_at: new Date(),
       updated_at: new Date(),
     });
@@ -58,16 +73,33 @@ router.post('/register', async (req, res) => {
     });
 
     res.json({
+      token,
       user: {
         id: newUser._id,
         email: newUser.email,
+        first_name: newUser.first_name,
+        last_name: newUser.last_name,
+        avatar: newUser.avatar,
+        gender: newUser.gender,
+        birth_date: newUser.birth_date,
+        phone: newUser.phone,
+        interests: newUser.interests,
+        activities: newUser.activities,
       },
-      token,
     });
   } catch (err) {
     res.status(500).json({ message: 'สมัครไม่สำเร็จ', error: err });
   }
 });
 
+// POST /api/auth/check-email
+router.post('/check-email', async (req, res) => {
+  const { email } = req.body;
+  const exists = await User.findOne({ email });
+
+  res.json({
+    exists: !!exists,
+  });
+});
 
 export default router;

@@ -11,6 +11,7 @@ type Member = {
 export type Group = {
   _id: string;
   name: string;
+  owner?: Member;
   members?: Member[];
   finalizedPlanId?: {
     trip_title?: string;
@@ -44,8 +45,12 @@ export default function GroupCard({
 }: Props) {
 
   const members = group.members ?? [];
-  const showAvatars = members.slice(0, 3);
-  const extraCount = Math.max(0, members.length - showAvatars.length);
+  const allMembers = group.owner
+  ? [group.owner, ...members]
+  : members;
+
+  const showAvatars = allMembers.slice(0, 3);
+  const extraCount = Math.max(0, allMembers.length - showAvatars.length);
 
   const voted = group.voteProgress?.voted ?? 0;
   const total = group.voteProgress?.total ?? members.length;
@@ -55,44 +60,23 @@ export default function GroupCard({
   const hasPlan = !!group.finalizedPlanId?.trip_title;
 
   return (
-
-    <View className="
-      bg-white/90
-      border border-gray-100
-      rounded-3xl
-      p-5
-      mr-4
-      w-[320px]
-      shadow-sm
-    ">
+    <View className=" bg-white/90 border border-gray-100 rounded-3xl p-5 mr-4 w-[320px] shadow-sm">
 
       {/* PLAN STATUS */}
-
       <View className="flex-row items-center mb-3">
-
-        <Ionicons
-          name={hasPlan ? "checkmark-circle" : "alert-circle"}
-          size={16}
-          color={hasPlan ? "#22C55E" : "#F59E0B"}
-        />
+        <Ionicons name={hasPlan ? "checkmark-circle" : "alert-circle"} size={16} color={hasPlan ? "#22C55E" : "#F59E0B"} />
 
         <Text className="ml-2 text-xs font-medium text-gray-700">
-
           {hasPlan
             ? `แชร์แผน: ${group.finalizedPlanId?.trip_title}`
             : "ยังไม่ได้แชร์แผน"}
-
         </Text>
-
       </View>
 
 
       {/* VOTE PROGRESS */}
-
       <View className="mb-3">
-
         <View className="flex-row justify-between items-center mb-1">
-
           <Text className="text-xs text-gray-600 font-medium">
             สถานะโหวต
           </Text>
@@ -100,27 +84,19 @@ export default function GroupCard({
           <Text className="text-xs text-gray-600 font-medium">
             {voted} / {total} คน
           </Text>
-
         </View>
 
         <View className="h-2 bg-gray-200 rounded-full overflow-hidden">
-
           <View
             style={{ width: `${percent * 100}%` }}
             className="h-2 bg-sky-700"
           />
-
         </View>
-
       </View>
 
-
       {/* MEMBERS */}
-
       <View className="flex-row items-center">
-
         <View className="flex-row -space-x-3">
-
           {showAvatars.map((m, idx) => (
             <Image
               key={m._id ?? `${group._id}-mem-${idx}`}
@@ -128,7 +104,6 @@ export default function GroupCard({
               className="w-12 h-12 rounded-full border-2 border-white"
             />
           ))}
-
         </View>
 
         {extraCount > 0 && (
@@ -136,12 +111,10 @@ export default function GroupCard({
             +{extraCount}
           </Text>
         )}
-
       </View>
 
 
       {/* GROUP NAME */}
-
       <Text
         numberOfLines={2}
         className="mt-4 text-2xl font-semibold text-gray-900"
@@ -149,26 +122,17 @@ export default function GroupCard({
         {group.name}
       </Text>
 
-
       {/* ACTIONS */}
-
       <View className="mt-5 flex-row items-center justify-between">
-
         <Pressable
           onPress={() => onPressDetail?.(group)}
           className="bg-orange-400 px-5 py-3 rounded-full flex-row items-center"
         >
-
-          <Ionicons
-            name="eye-outline"
-            size={18}
-            color="#fff"
-          />
+          <Ionicons name="eye-outline" size={18} color="#fff" />
 
           <Text className="ml-2 text-white font-medium text-base">
             ดูรายละเอียด
           </Text>
-
         </Pressable>
 
         {isOwner && (
@@ -183,10 +147,7 @@ export default function GroupCard({
             />
           </Pressable>
         )}
-
       </View>
-
     </View>
-
   );
 }

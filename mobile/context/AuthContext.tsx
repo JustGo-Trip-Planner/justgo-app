@@ -9,6 +9,11 @@ type User = {
   first_name?: string;
   last_name?: string;
   avatar?: string;
+  gender?: string;
+  birth_date?: string;
+  phone?: string;
+  interests?: string[];
+  activities?: string[];
 };
 
 type AuthContextType = {
@@ -68,7 +73,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     if (!token) return;
     try {
       const res = await axios.get<{ user: User }>("/api/auth/me");
-      setUser(res.data.user);
+      setUser((prev) => ({
+        ...prev,
+        ...res.data.user,
+      }));
     } catch (err) {
       console.log("refreshMe failed:", err);
     }

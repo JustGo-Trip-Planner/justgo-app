@@ -117,16 +117,30 @@ export default function PlanPreference({
       </View>
 
       {/* TOGGLE */}
-      <View className="flex-row items-center justify-between px-5 mb-3">
-        <Text className="text-gray-700 font-medium font-sans">
-          ใช้ความชอบจากโปรไฟล์
-        </Text>
+      <View className="px-5 mb-4">
+        <View className="flex-row items-center justify-between px-4 py-3 rounded-2xl bg-white/70 border border-gray-200">
 
-        <Switch
-          value={useProfile}
-          onValueChange={setUseProfile}
-          disabled={disableProfileToggle}
-        />
+          <View className="flex-row items-center flex-1">
+            <View className="w-9 h-9 rounded-full bg-orange-100 items-center justify-center mr-3">
+              <Ionicons name="sparkles-outline" size={18} color="#f97316" />
+            </View>
+
+            <View className="flex-1">
+              <Text className="text-gray-900 font-semibold font-sans">
+                ใช้ความชอบจากโปรไฟล์
+              </Text>
+              <Text className="text-gray-400 text-sm font-sans">
+                แนะนำอัตโนมัติจากข้อมูลของคุณ
+              </Text>
+            </View>
+          </View>
+
+          <Switch
+            value={useProfile}
+            onValueChange={setUseProfile}
+            disabled={disableProfileToggle}
+          />
+        </View>
       </View>
 
       {/* SUMMARY */}

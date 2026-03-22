@@ -76,7 +76,7 @@ export default function WhoScreen() {
             คนเดียว
           </Text>
           <Text className="text-sm font-medium font-sans text-gray-500 mt-1">
-            เดินทางคนเดียว สบาย ๆ สไตล์ตัวเอง
+            เดินทางคนเดียวอย่างอิสระ เลือกเส้นทางและเวลาได้ตามใจคุณ
           </Text>
         </TouchableOpacity>
 
@@ -93,7 +93,7 @@ export default function WhoScreen() {
             คู่รัก
           </Text>
           <Text className="text-sm font-medium font-sans text-gray-500 mt-1">
-            ทริปสุดโรแมนติกสำหรับเราสองคน
+            ใช้เวลาคุณภาพกับคนพิเศษ ในบรรยากาศโรแมนติกและผ่อนคลาย
           </Text>
         </TouchableOpacity>
 
@@ -110,7 +110,7 @@ export default function WhoScreen() {
             ครอบครัว
           </Text>
           <Text className="text-sm font-medium font-sans text-gray-500 mt-1">
-            ทริปสนุกพร้อมหน้าทั้งครอบครัว
+            เที่ยวพร้อมหน้าทั้งครอบครัว มีกิจกรรมที่เหมาะกับทั้งเด็กและผู้ใหญ่
           </Text>
         </TouchableOpacity>
 
@@ -135,10 +135,10 @@ export default function WhoScreen() {
           }`}
         >
           <Text className={`text-lg font-semibold font-sans ${mode === "เพื่อน" ? "text-[#3262AB]" : "text-gray-800"}`}>
-            เพื่อน
+            กลุ่มเพื่อน
           </Text>
           <Text className="text-sm font-medium font-sans text-gray-500 mt-1">
-            เที่ยวกับเพื่อน ๆ สายเฮฮา
+            สนุกไปกับแก๊งเพื่อน วางแผนทริปให้ตรงสไตล์ของทุกคน
           </Text>
           {mode === "เพื่อน" && (
             <View className="flex-row items-center justify-end mt-3">

@@ -264,7 +264,7 @@ export default function GroupMembersSection({
 
             </View>
 
-            {isOwner && isPending && (
+            {isPending && (
               <Pressable
                 onPress={() => removeInvite(member)}
                 disabled={isRemoving}
@@ -282,17 +282,15 @@ export default function GroupMembersSection({
         );
       })}
 
-      {isOwner && (
-        <Pressable
-          onPress={() => setOverlayOpen(true)}
-          className="mt-4 bg-sky-700 py-3 rounded-2xl flex-row items-center justify-center"
-        >
-          <Ionicons name="person-add" size={18} color="white" />
-          <Text className="ml-2 text-white font-sans font-semibold">
-            เชิญเพื่อน
-          </Text>
-        </Pressable>
-      )}
+      <Pressable
+        onPress={() => setOverlayOpen(true)}
+        className="mt-4 bg-sky-700 py-3 rounded-2xl flex-row items-center justify-center"
+      >
+        <Ionicons name="person-add" size={18} color="white" />
+        <Text className="ml-2 text-white font-sans font-semibold">
+          เชิญเพื่อน
+        </Text>
+      </Pressable>
 
       {/* MODAL */}
       <Modal visible={overlayOpen} animationType="slide" transparent>

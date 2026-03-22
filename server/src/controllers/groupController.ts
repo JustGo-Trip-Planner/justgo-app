@@ -245,8 +245,19 @@ export const inviteMember = async (req: AuthRequest, res: Response) => {
     const group = await GroupModel.findById(groupId);
     if (!group) return res.status(404).json({ message: "Group not found" });
 
-    if (String(group.owner) !== String(req.userId)) {
-      return res.status(403).json({ message: "Only owner can invite" });
+    const isOwner = String(group.owner) === String(req.userId);
+    const isMember = group.members.some(
+      (m: any) =>
+        String(m.userId) === String(req.userId) &&
+        m.status === "accepted"
+    );
+
+    if (!isOwner && !isMember) {
+      return res.status(403).json({ message: "Forbidden" });
+    }
+
+    if (String(userId) === String(group.owner)) {
+      return res.status(400).json({ message: "Cannot invite owner" });
     }
 
     const exists = group.members.find(
@@ -254,7 +265,12 @@ export const inviteMember = async (req: AuthRequest, res: Response) => {
     );
 
     if (exists) {
-      return res.status(400).json({ message: "User already in group or invited" });
+      return res.status(400).json({ message: "User already invited or in group" });
+    }
+
+    const pending = group.members.find((m: any) => String(m.userId) === String(userId) && m.status === "pending");
+    if (pending) {
+      return res.status(400).json({ message: "Already invited (pending)" });
     }
 
     // add to group members
@@ -299,8 +315,16 @@ export const removeInviteMember = async (req: AuthRequest, res: Response) => {
     if (!group)
       return res.status(404).json({ message: "Group not found" });
 
-    if (String(group.owner) !== String(req.userId))
-      return res.status(403).json({ message: "Only owner can remove invite" });
+    const isOwner = String(group.owner) === String(req.userId);
+    const isMember = group.members.some(
+      (m: any) =>
+        String(m.userId) === String(req.userId) &&
+        m.status === "accepted"
+    );
+
+    if (!isOwner && !isMember) {
+      return res.status(403).json({ message: "Forbidden" });
+    }
 
     const result = await GroupModel.updateOne(
       {

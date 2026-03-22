@@ -53,7 +53,7 @@ export default function GroupCard({
   const extraCount = Math.max(0, allMembers.length - showAvatars.length);
 
   const voted = group.voteProgress?.voted ?? 0;
-  const total = group.voteProgress?.total ?? members.length;
+  const total = group.voteProgress?.total ?? 1;
 
   const percent = total === 0 ? 0 : voted / total;
 
@@ -126,7 +126,7 @@ export default function GroupCard({
       <View className="mt-5 flex-row items-center justify-between">
         <Pressable
           onPress={() => onPressDetail?.(group)}
-          className="bg-orange-400 px-5 py-3 rounded-full flex-row items-center"
+          className="bg-orange-500 px-5 py-3 rounded-full flex-row items-center"
         >
           <Ionicons name="eye-outline" size={18} color="#fff" />
 

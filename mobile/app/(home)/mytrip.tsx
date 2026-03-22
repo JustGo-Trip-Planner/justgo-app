@@ -5,6 +5,7 @@ import {
   ImageBackground,
   ActivityIndicator,
   Alert,
+  Pressable
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
@@ -105,33 +106,69 @@ export default function MyTrip() {
     );
   };
 
-  const EmptyState = () => (
-    <View className="h-full items-center justify-center rounded-2xl bg-white/80 px-6 py-12 shadow-md">
-      <Ionicons name="map-outline" size={72} color="#cbd5e1" />
+  const EmptyCurrent = () => (
+    <View className="flex-1 justify-center items-center px-6">
 
-      <Text className="mt-4 mb-2 text-xl font-semibold font-sans text-gray-700">
-        ยังไม่มีแผนของคุณ
-      </Text>
+      <View className="w-full items-center bg-white/80 rounded-3xl px-6 py-10">
+        <View className="bg-orange-100 p-5 rounded-full">
+          <Ionicons name="map-outline" size={40} color="#f97316" />
+        </View>
 
-      <Text className="mb-6 text-center font-medium font-sans text-gray-500">
-        เริ่มสร้างแผนการเดินทางเพื่อบันทึกทริปแรกของคุณ
-      </Text>
-
-      <TouchableOpacity
-        onPress={() => router.push("/")}
-        className="flex-row items-center rounded-full bg-orange-500 px-6 py-3"
-      >
-        <Ionicons name="add-circle-outline" size={20} color="#fff" />
-        <Text className="ml-2 text-base font-medium font-sans text-white">
-          สร้างแผนการเดินทาง
+        <Text className="mt-5 text-xl font-semibold text-gray-800 text-center">
+          ยังไม่มีแผนการเดินทาง
         </Text>
-      </TouchableOpacity>
+
+        <Text className="mt-2 text-center text-gray-500 font-medium leading-5">
+          คุณยังไม่ได้สร้างแผนการเดินทาง{"\n"}
+          เริ่มวางแผนทริปแรกของคุณได้เลย
+        </Text>
+
+        <Pressable
+          onPress={() => router.push("/")}
+          className="mt-6 bg-orange-500 px-6 py-3 rounded-full flex-row items-center"
+        >
+          <Ionicons name="add" size={18} color="white" />
+          <Text className="ml-2 text-white font-semibold">
+            สร้างแผนใหม่
+          </Text>
+        </Pressable>
+      </View>
+    </View>
+  );
+
+  const EmptyHistory = () => (
+    <View className="flex-1 justify-center items-center px-6">
+
+      <View className="w-full items-center bg-white/80 rounded-3xl px-6 py-10">
+        <View className="bg-sky-100 p-5 rounded-full">
+          <Ionicons name="time-outline" size={40} color="#0284c7" />
+        </View>
+
+        <Text className="mt-5 text-xl font-semibold text-gray-800 text-center">
+          ยังไม่มีประวัติการเดินทาง
+        </Text>
+
+        <Text className="mt-2 text-center text-gray-500 font-medium leading-5">
+          เมื่อคุณเดินทางเสร็จแล้ว{"\n"}
+          ทริปจะถูกบันทึกไว้ที่นี่
+        </Text>
+
+        <Pressable
+          onPress={() => setTab("current")}
+          className="mt-6 bg-sky-600 px-6 py-3 rounded-full flex-row items-center"
+        >
+          <Ionicons name="airplane-outline" size={18} color="white" />
+          <Text className="ml-2 text-white font-semibold">
+            ดูแผนปัจจุบัน
+          </Text>
+        </Pressable>
+      </View>
     </View>
   );
 
   const renderCurrentPlans = () => {
     if (plans.length === 0) {
-      return <EmptyState />;
+      return <EmptyCurrent />;
     }
 
     return plans.map((plan, index) => {
@@ -152,7 +189,7 @@ export default function MyTrip() {
 
   const renderHistoryPlans = () => {
     if (history.length === 0) {
-      return <EmptyState />;
+      return <EmptyHistory />;
     }
 
     return history.map((plan, index) => {
@@ -197,7 +234,7 @@ export default function MyTrip() {
               onPress={() => setTab("current")}
               className={`mr-2 rounded-full px-4 py-2 ${
                 tab === "current"
-                  ? "bg-orange-400"
+                  ? "bg-orange-500"
                   : "border border-gray-300 bg-white"
               }`}
             >

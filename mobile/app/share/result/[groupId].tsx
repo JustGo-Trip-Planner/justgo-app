@@ -193,18 +193,16 @@ const renderCriteria = (criteria:any)=>{
       {/* WINNER */}
       {winner && (
         <Animated.View
-          style={{transform:[{scale:winnerScale}]}}
+          style={{ transform: [{ scale: winnerScale }] }}
           className="bg-white rounded-3xl overflow-hidden mb-6 shadow-xl"
         >
-
           <Image
             source={img(winner.plan?.previewImage)}
             className="w-full h-56"
           />
-          <View className="absolute top-4 right-4 bg-yellow-400 p-3 rounded-full">
-            <Ionicons name="trophy" size={26} color="white"/>
+          <View className="absolute top-4 right-4 bg-orange-500 p-3 rounded-full">
+            <Ionicons name="trophy" size={26} color="white" />
           </View>
-
 
           <View className="p-5">
             <Text className="text-xl font-semibold font-sans mb-1">
@@ -216,17 +214,14 @@ const renderCriteria = (criteria:any)=>{
             </Text>
 
             <View className="flex-row items-center justify-between mt-3">
-
-              {/* SCORE */}
               <View className="flex-row items-center">
-                <Ionicons name="star" size={20} color="#F59E0B"
-                />
+                <Ionicons name="star" size={20} color="#F59E0B" />
                 <Text className="ml-2 text-lg font-semibold font-sans text-orange-500">
                   {winner.avgScore} / 5
                 </Text>
               </View>
 
-              {/* DETAIL BUTTON */}
+              {/* DETAIL */}
               <Pressable
                 onPress={() => toggleBreakdown(winner.planId)}
                 className="flex-row items-center"
@@ -234,11 +229,30 @@ const renderCriteria = (criteria:any)=>{
                 <Text className="font-medium font-sans mr-1">
                   ดูรายละเอียด
                 </Text>
-                <Ionicons name={expanded[winner.planId] ? "chevron-up" : "chevron-down"} size={16} />
+                <Ionicons
+                  name={expanded[winner.planId] ? "chevron-up" : "chevron-down"}
+                  size={16}
+                />
               </Pressable>
             </View>
 
             {expanded[winner.planId] && renderCriteria(winner.criteria)}
+
+            {isOwner && (
+              <Pressable
+                onPress={() => finalizePlan(winner.planId)}
+                disabled={finalizing}
+                className="mt-5 bg-orange-500 py-3 rounded-2xl items-center"
+              >
+                {finalizing ? (
+                  <ActivityIndicator color="white" />
+                ) : (
+                  <Text className="text-white font-semibold">
+                    ใช้แผนนี้เป็นแผนหลัก
+                  </Text>
+                )}
+              </Pressable>
+            )}
           </View>
         </Animated.View>
       )}
@@ -271,11 +285,11 @@ const renderCriteria = (criteria:any)=>{
                 className="w-24 h-20 rounded-xl"
               />
               <View className="flex-1 ml-3">
-                <Text className="font-semibold font-sans">
+                <Text className="font-semibold">
                   #{rank} {r.plan?.trip_title}
                 </Text>
 
-                <Text className="text-gray-500 text-xs font-medium font-sans">
+                <Text className="text-gray-500 text-sm font-medium font-sans">
                   คะแนนเฉลี่ย {r.avgScore}/5
                 </Text>
               </View>
@@ -290,22 +304,6 @@ const renderCriteria = (criteria:any)=>{
           </Animated.View>
         )
       })}
-
-      {/* FINALIZE */}
-      {winner && isOwner && (
-        <Pressable
-          onPress={()=>finalizePlan(winner.planId)}
-          className="bg-orange-500 py-4 rounded-full items-center mt-6"
-        >
-
-          {finalizing
-            ? <ActivityIndicator color="white"/>
-            : <Text className="text-white font-semibold font-sans">
-                ใช้อันดับ 1 เป็นแผนหลัก
-              </Text>
-          }
-        </Pressable>
-      )}
     </ScrollView>
   );
 }

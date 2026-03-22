@@ -22,11 +22,8 @@ export default function ResultPage() {
         <PlanCard
           key={index}
           plan={planItem}
+          index={index}
           onPress={() =>
-            // router.push({
-            //   pathname: "/plan/(preview)/detail/[id]",
-            //   params: { id: planItem.id },
-            // })
             router.push(`/plan/(preview)/detail/${index}`)
           }
         />

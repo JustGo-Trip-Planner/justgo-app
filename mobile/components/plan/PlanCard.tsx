@@ -1,7 +1,12 @@
-import { View, Text, Image, TouchableOpacity } from "react-native";
+import { View, Text, Image, TouchableOpacity, Alert } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { format } from "date-fns";
 import { th } from "date-fns/locale";
+import { useRouter } from "expo-router";
+import Constants from "expo-constants";
+import axios from "axios";
+import { useAuth } from "@/context/AuthContext";
+import { usePlan, useSelectedPlan } from "@/context/PlanContext";
 
 interface PlanCardProps {
   plan: {
@@ -15,11 +20,18 @@ interface PlanCardProps {
     total_budget: number;
     previewImage?: string;
   };
+  index: number;
   onPress: () => void;
-  onSelect: () => void;
 }
 
-export default function PlanCard({ plan, onPress, onSelect }: PlanCardProps) {
+export default function PlanCard({ plan, index, onPress }: PlanCardProps) {
+  const router = useRouter();
+  const { user } = useAuth();
+  const { plan: basePlan } = usePlan();
+  const fullPlan = useSelectedPlan(index.toString());
+
+  const API_URL = Constants.expoConfig?.extra?.API_URL;
+
   const {
     trip_title,
     total_places,
@@ -33,70 +45,107 @@ export default function PlanCard({ plan, onPress, onSelect }: PlanCardProps) {
 
   const hotelStars = recommended_hotels?.[0]?.stars || 3;
 
+  const handleSelect = async () => {
+    try {
+      if (!user) {
+        Alert.alert("กรุณาเข้าสู่ระบบก่อน");
+        return;
+      }
+
+      const res = await axios.post(`${API_URL}/api/plan/save`, {
+        userId: user.id,
+        ...basePlan,
+        ...fullPlan,
+      });
+
+      console.log("✅ Plan saved:", res.data);
+      router.push("/(home)/mytrip");
+    } catch (error) {
+      console.error("❌ Save plan failed:", error);
+      Alert.alert("เกิดข้อผิดพลาด", "ไม่สามารถบันทึกแผนได้");
+    }
+  };
+
   return (
-    <View className="bg-white rounded-2xl shadow-sm mb-4 overflow-hidden border border-gray-300">
-      <Image
-        source={{ uri: previewImage }}
-        className="w-full h-40"
-        resizeMode="cover"
-      />
+    <TouchableOpacity
+      activeOpacity={0.9}
+      onPress={onPress}
+      className="mb-5 rounded-t-3xl overflow-hidden"
+    >
+      {/* IMAGE */}
+      <View className="h-52">
+        <Image
+          source={{ uri: previewImage }}
+          className="absolute w-full h-full"
+          resizeMode="cover"
+        />
 
-      <View className="p-4">
-        <Text className="text-2xl font-semibold text-black mb-2">{trip_title}</Text>
+        {/* OVERLAY */}
+        <View className="absolute inset-0 bg-black/40" />
 
-        <View className="flex-row items-center flex-wrap gap-3 mb-2">
-          <View className="flex-row items-center space-x-1">
-            <Ionicons name="location-outline" size={18} color="#6b7280" />
-            <Text className="text-gray-600 text-sm">
-              สถานที่ท่องเที่ยว {total_places} แห่ง
-            </Text>
-          </View>
+        {/* CONTENT */}
+        <View className="flex-1 justify-end px-4 py-2">
+          <Text className="text-white text-xl font-semibold">
+            {trip_title}
+          </Text>
 
-          <View className="flex-row items-center space-x-1">
-            <Ionicons name="bed-outline" size={18} color="#6b7280" />
-            <Text className="text-gray-600 text-sm">
-              โรงแรมระดับ {hotelStars} ดาว
-            </Text>
-          </View>
-        </View>
-
-        <View className="flex-row items-center space-x-1 mb-1">
-          <Ionicons name="people-outline" size={18} color="#6b7280" />
-          <Text className="text-gray-600 text-sm">{group}</Text>
-        </View>
-
-        <View className="flex-row items-center space-x-1 mb-4">
-          <Ionicons name="calendar-outline" size={18} color="#6b7280" />
-          <Text className="text-gray-600 text-sm font-medium ml-1">วันที่เดินทาง</Text>
-          <Text className="text-gray-800 text-sm font-medium ml-2">
+          <Text className="text-white font-medium mt-1">
             {format(new Date(start_date), "dd MMM", { locale: th })} –{" "}
             {format(new Date(end_date), "dd MMM yyyy", { locale: th })}
           </Text>
+
+          <View className="flex-row flex-wrap mt-2 gap-3">
+            <View className="flex-row items-center">
+              <Ionicons name="location-outline" size={18} color="#fff" />
+              <Text className="text-white font-medium ml-1">
+                {total_places} สถานที่
+              </Text>
+            </View>
+
+            <View className="flex-row items-center">
+              <Ionicons name="bed-outline" size={18} color="#fff" />
+              <Text className="text-white font-medium ml-1">
+                ระดับ {hotelStars} ดาว
+              </Text>
+            </View>
+
+            <View className="flex-row items-center">
+              <Ionicons name="people-outline" size={18} color="#fff" />
+              <Text className="text-white font-medium ml-1">
+                {group}
+              </Text>
+            </View>
+          </View>
         </View>
 
-        <Text className="text-lg text-gray-600 font-sans mb-2">ค่าใช้จ่ายทั้งทริปโดยประมาณ</Text>
-        <Text className="text-xl font-medium text-black mb-4">
-          ฿{total_budget.toLocaleString()}
-        </Text>
-
-        <View className="flex-row justify-between space-x-2">
-          <TouchableOpacity
-            onPress={onSelect}
-            className="flex-1 bg-orange-500 rounded-full py-2 flex-row items-center justify-center"
-          >
-            <Ionicons name="location-outline" size={18} color="#fff" />
-            <Text className="text-white font-medium ml-1">เลือกแผนนี้</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            onPress={onPress}
-            className="flex-1 bg-blue-600 rounded-full py-2 flex-row items-center justify-center"
-          >
-            <Ionicons name="information-circle-outline" size={18} color="#fff" />
-            <Text className="text-white font-medium ml-1">ดูรายละเอียดเพิ่มเติม</Text>
-          </TouchableOpacity>
+        {/* PRICE */}
+        <View className="absolute top-3 right-3 bg-white/90 px-3 py-1 rounded-full">
+          <Text className="text-gray-900 text-lg font-semibold">
+            ฿{total_budget.toLocaleString()}
+          </Text>
         </View>
       </View>
-    </View>
+
+      {/* ACTIONS */}
+      <View className="flex-row mt-3 gap-2 px-1">
+        <TouchableOpacity
+          onPress={handleSelect}
+          className="flex-1 py-3 rounded-xl bg-orange-500 items-center"
+        >
+          <Text className="text-white text-sm font-medium">
+            เลือกแผนนี้
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          onPress={onPress}
+          className="flex-1 py-3 rounded-xl bg-gray-100 items-center"
+        >
+          <Text className="text-gray-700 text-sm font-medium">
+            รายละเอียด
+          </Text>
+        </TouchableOpacity>
+      </View>
+    </TouchableOpacity>
   );
 }

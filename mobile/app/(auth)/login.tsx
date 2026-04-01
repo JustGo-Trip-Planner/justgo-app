@@ -61,7 +61,7 @@ export default function LoginScreen() {
               placeholder="กรอกที่อยู่อีเมลของคุณ"
               keyboardType="email-address"
               autoCapitalize="none"
-              className="bg-white border border-gray-300 rounded-xl px-4 py-3 mb-4"
+              className="font-sans bg-white border border-gray-300 rounded-xl px-4 py-3 mb-4"
             />
 
             {/* Password */}
@@ -73,7 +73,7 @@ export default function LoginScreen() {
                 placeholder="กรอกรหัสผ่านของคุณ"
                 secureTextEntry={!showPassword}
                 autoCapitalize="none"
-                className="bg-white border border-gray-300 rounded-xl px-4 py-3 pr-10"
+                className="font-sans bg-white border border-gray-300 rounded-xl px-4 py-3 pr-10"
               />
               <TouchableOpacity
                 onPress={() => setShowPassword(!showPassword)}
@@ -102,9 +102,9 @@ export default function LoginScreen() {
 
             {/* Register link */}
             <View className="mt-4 items-center">
-              <Text className="text-gray-600">ยังไม่มีบัญชีผู้ใช้เหรอ?</Text>
+              <Text className="font-sans text-sm text-gray-600">ยังไม่มีบัญชีผู้ใช้?</Text>
               <TouchableOpacity onPress={() => router.push('/register')}>
-                <Text className="text-orange-500 font-semibold mt-1">สมัครสมาชิก</Text>
+                <Text className="text-lg text-orange-500 font-semibold">สมัครสมาชิก</Text>
               </TouchableOpacity>
             </View>
           </View>

@@ -35,8 +35,7 @@ export default function ActivityTab({
   const [confirmVisible, setConfirmVisible] = useState(false);
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
 
-  const activities =
-    plan?.daily_itinerary?.[activeDay]?.activities ?? [];
+  const activities = plan?.daily_itinerary?.[activeDay]?.activities ?? [];
 
   const timeOptions = useMemo(() => {
     const slots: string[] = [];
@@ -56,11 +55,8 @@ export default function ActivityTab({
     setPlan((prev: any) => {
       if (!prev?.daily_itinerary) return prev;
 
-      const updatedDaily = prev.daily_itinerary.map(
-        (day: any, idx: number) =>
-          idx === activeDay
-            ? { ...day, activities: newList }
-            : day
+      const updatedDaily = prev.daily_itinerary.map((day: any, idx: number) =>
+        idx === activeDay ? { ...day, activities: newList } : day
       );
 
       return { ...prev, daily_itinerary: updatedDaily };
@@ -75,18 +71,14 @@ export default function ActivityTab({
 
   const applyTime = () => {
     const updated = activities.map((a: any) =>
-      a._localId === editingId
-        ? { ...a, time: selectedTime }
-        : a
+      a._localId === editingId ? { ...a, time: selectedTime } : a
     );
     updateActivities(updated);
     setPickerVisible(false);
   };
 
   const removeActivity = (localId: string) => {
-    const filtered = activities.filter(
-      (a: any) => a._localId !== localId
-    );
+    const filtered = activities.filter((a: any) => a._localId !== localId);
     updateActivities(filtered);
   };
 
@@ -106,25 +98,23 @@ export default function ActivityTab({
   const renderRightActions = (id: string) => (
     <Pressable
       onPress={() => confirmDelete(id)}
-      className="justify-center items-center bg-red-500 w-24 rounded-xl mb-3"
+      className="mb-3 w-24 items-center justify-center rounded-xl bg-red-500"
     >
       <Ionicons name="trash-outline" size={26} color="white" />
-      <Text className="text-white text-xs mt-1">ลบ</Text>
+      <Text className="mt-1 text-sm font-sans text-white">ลบ</Text>
     </Pressable>
   );
 
   return (
     <View className="flex-1">
-
       <DraggableFlatList
         data={activities}
         keyExtractor={(item) => item._localId}
         onDragEnd={({ data }) => updateActivities(data)}
         nestedScrollEnabled
-        contentContainerStyle={{ paddingBottom: 120 }}
-
+        contentContainerStyle={{ paddingBottom: 80 }}
         ListHeaderComponent={
-          <View className="items-center my-4">
+          <View className="my-4 items-center">
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
@@ -134,17 +124,17 @@ export default function ActivityTab({
                 <Pressable
                   key={idx}
                   onPress={() => setActiveDay(idx)}
-                  className={`mx-2 px-5 h-10 rounded-full border justify-center items-center ${
+                  className={`mx-2 h-10 justify-center rounded-full border px-5 ${
                     activeDay === idx
-                      ? "bg-blue-600 border-blue-600"
-                      : "bg-white border-gray-300"
+                      ? "border-sky-700 bg-sky-700"
+                      : "border-gray-300 bg-white"
                   }`}
                 >
                   <Text
-                    className={`font-medium ${
+                    className={`text-base ${
                       activeDay === idx
-                        ? "text-white"
-                        : "text-gray-700"
+                        ? "font-semibold text-white"
+                        : "font-medium text-gray-700"
                     }`}
                   >
                     วันที่ {idx + 1}
@@ -154,32 +144,27 @@ export default function ActivityTab({
             </ScrollView>
           </View>
         }
-
         renderItem={({ item, drag }) => (
           <ScaleDecorator>
             <ReanimatedSwipeable
               friction={2}
               rightThreshold={40}
-              renderRightActions={() =>
-                renderRightActions(item._localId)
-              }
+              renderRightActions={() => renderRightActions(item._localId)}
             >
-              <Pressable className="flex-row items-center bg-white border border-gray-200 rounded-xl p-3 mb-3">
+              <Pressable className="mb-3 flex-row items-center rounded-xl border border-gray-200 bg-white p-3">
                 <Image
                   source={{
-                    uri:
-                      item.image ||
-                      "https://via.placeholder.com/150",
+                    uri: item.image || "https://via.placeholder.com/150",
                   }}
-                  className="w-20 h-20 mr-3 rounded-md"
+                  className="mr-3 h-20 w-20 rounded-md"
                 />
 
                 <View className="flex-1 justify-center">
-                  <Text className="font-semibold">
+                  <Text className="text-lg font-semibold text-gray-900">
                     {item.place_name}
                   </Text>
 
-                  <View className="flex-row items-center mt-2">
+                  <View className="mt-2 flex-row items-center">
                     <Ionicons
                       name="time-outline"
                       size={16}
@@ -187,16 +172,11 @@ export default function ActivityTab({
                     />
 
                     <Pressable
-                      onPress={() =>
-                        openTimePicker(
-                          item._localId,
-                          item.time
-                        )
-                      }
-                      className="ml-2 px-3 py-1 rounded-full bg-gray-100"
+                      onPress={() => openTimePicker(item._localId, item.time)}
+                      className="ml-2 rounded-full bg-gray-100 px-3 py-1"
                     >
-                      <Text className="text-gray-700 font-medium">
-                        {item.time}
+                      <Text className="text-base font-medium text-gray-700">
+                        {item.time || "06:00"}
                       </Text>
                     </Pressable>
                   </View>
@@ -204,7 +184,7 @@ export default function ActivityTab({
 
                 <Pressable
                   onPressIn={drag}
-                  className="pl-3 pr-1 py-2 justify-center"
+                  className="justify-center py-2 pl-3 pr-1"
                 >
                   <Ionicons
                     name="reorder-three-outline"
@@ -216,44 +196,35 @@ export default function ActivityTab({
             </ReanimatedSwipeable>
           </ScaleDecorator>
         )}
-
         ListEmptyComponent={
-          <View className="py-6 items-center">
-            <Text className="text-gray-400">
+          <View className="items-center py-6">
+            <Text className="text-sm font-sans text-gray-400">
               ยังไม่มีสถานที่
             </Text>
           </View>
         }
-
         ListFooterComponent={
           <Pressable
             onPress={onPressAddLocation}
-            className="flex-row bg-green-600 py-3 rounded-full justify-center items-center mt-4"
+            className="mt-4 mb-2 flex-row items-center justify-center rounded-full bg-green-600 py-3"
           >
             <Ionicons name="add-circle-outline" size={24} color="white" />
-            <Text className="ml-3 text-white font-semibold">
+            <Text className="ml-3 text-lg font-semibold text-white">
               เพิ่มสถานที่ใหม่
             </Text>
           </Pressable>
         }
       />
 
-      {/* Time Picker Modal */}
       <Modal visible={pickerVisible} transparent animationType="fade">
         <View className="flex-1 justify-end bg-black/40">
-          <View className="bg-white rounded-t-3xl px-5 pt-4 pb-8 max-h-[70%]">
-            <View className="flex-row justify-between items-center mb-4">
-              <Text className="text-lg font-semibold">
+          <View className="max-h-[70%] rounded-t-3xl bg-white px-5 pt-4 pb-8">
+            <View className="mb-4 flex-row items-center justify-between">
+              <Text className="text-lg font-semibold text-gray-900">
                 {selectedTime}
               </Text>
-              <Pressable
-                onPress={() => setPickerVisible(false)}
-              >
-                <Ionicons
-                  name="close"
-                  size={22}
-                  color="#6b7280"
-                />
+              <Pressable onPress={() => setPickerVisible(false)}>
+                <Ionicons name="close" size={22} color="#6b7280" />
               </Pressable>
             </View>
 
@@ -264,7 +235,7 @@ export default function ActivityTab({
                   <Pressable
                     key={t}
                     onPress={() => setSelectedTime(t)}
-                    className={`py-3 px-3 rounded-xl mb-1 ${
+                    className={`mb-1 rounded-xl px-3 py-3 ${
                       active ? "bg-gray-200" : ""
                     }`}
                   >
@@ -272,7 +243,7 @@ export default function ActivityTab({
                       className={`text-base ${
                         active
                           ? "font-semibold text-black"
-                          : "text-gray-600"
+                          : "font-medium text-gray-600"
                       }`}
                     >
                       {t}
@@ -284,9 +255,9 @@ export default function ActivityTab({
 
             <Pressable
               onPress={applyTime}
-              className="bg-blue-600 mt-4 py-3 rounded-xl"
+              className="mt-4 rounded-xl bg-sky-700 py-3"
             >
-              <Text className="text-white text-center font-semibold">
+              <Text className="text-center text-lg font-semibold text-white">
                 ยืนยัน
               </Text>
             </Pressable>
@@ -294,29 +265,28 @@ export default function ActivityTab({
         </View>
       </Modal>
 
-      {/* Delete Confirm Modal */}
       <Modal visible={confirmVisible} transparent animationType="fade">
-        <View className="flex-1 justify-center items-center bg-black/40">
-          <View className="bg-white w-80 rounded-2xl p-6 shadow-lg">
-            <Text className="text-center text-lg font-semibold mb-6">
+        <View className="flex-1 items-center justify-center bg-black/40">
+          <View className="w-80 rounded-2xl bg-white p-6 shadow-lg">
+            <Text className="mb-6 text-center text-lg font-semibold text-gray-900">
               ลบสถานที่นี้?
             </Text>
 
             <View className="flex-row justify-between">
               <Pressable
                 onPress={() => setConfirmVisible(false)}
-                className="flex-1 py-3 mr-2 rounded-xl bg-gray-200 items-center"
+                className="mr-2 flex-1 items-center rounded-xl bg-gray-200 py-3"
               >
-                <Text className="font-medium text-gray-700">
+                <Text className="text-base font-medium text-gray-700">
                   ยกเลิก
                 </Text>
               </Pressable>
 
               <Pressable
                 onPress={handleDelete}
-                className="flex-1 py-3 ml-2 rounded-xl bg-red-500 items-center"
+                className="ml-2 flex-1 items-center rounded-xl bg-red-500 py-3"
               >
-                <Text className="font-medium text-white">
+                <Text className="text-base font-medium text-white">
                   ลบ
                 </Text>
               </Pressable>

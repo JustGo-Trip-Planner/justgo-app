@@ -251,7 +251,7 @@ export default function MyTrip() {
               onPress={() => setTab("history")}
               className={`rounded-full px-4 py-2 ${
                 tab === "history"
-                  ? "bg-orange-400"
+                  ? "bg-orange-500"
                   : "border border-gray-300 bg-white"
               }`}
             >

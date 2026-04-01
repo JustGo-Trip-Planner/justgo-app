@@ -72,7 +72,7 @@ export default function AddLocationScreen() {
       setLoading(true);
       const encodedQuery = encodeURIComponent(`${text} ${province}`);
       const url = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodedQuery}&region=th&language=th&location=${centerLat},${centerLng}&radius=40000&key=${GOOGLE_KEY}`;
-      const res = await axios.get(url);
+      const res = await axios.get<any>(url);
       setResults(res.data.results ?? []);
     } catch (e) {
       console.warn("Search error", e);
@@ -155,14 +155,14 @@ const onConfirm = () => {
   return (
     <View className="flex-1 bg-white">
       {/* Header */}
-      <View className="pt-12 px-4 pb-3 flex-row items-center justify-between">
+      <View className="pt-12 px-4 mt-2 pb-3 flex-row items-center justify-between">
         <Pressable
           onPress={() => router.back()}
           className="w-10 h-10 rounded-full bg-white/80 items-center justify-center"
         >
           <Ionicons name="chevron-back" size={24} color="#111827" />
         </Pressable>
-        <Text className="text-base font-semibold text-gray-900">
+        <Text className="text-xl font-semibold text-gray-900">
           เพิ่มสถานที่ใน {province}
         </Text>
         <View className="w-10" />
@@ -190,7 +190,7 @@ const onConfirm = () => {
       {/* Bottom sheet */}
       <View className="bg-white rounded-t-3xl px-4 pt-3 pb-5 shadow-xl">
         <View className="items-center pb-2">
-          <View className="w-10 h-1.5 rounded-full bg-gray-200" />
+          <View className="w-12 h-1.5 rounded-full bg-gray-200" />
         </View>
 
         {/* Search Bar */}
@@ -201,7 +201,7 @@ const onConfirm = () => {
             onChangeText={setQuery}
             placeholder={`ค้นหาสถานที่ใน ${province}`}
             placeholderTextColor="#9CA3AF"
-            className="flex-1 ml-2 text-gray-900"
+            className="flex-1 ml-2 font-sans text-gray-900"
           />
         </View>
 
@@ -229,7 +229,7 @@ const onConfirm = () => {
           )}
           ListEmptyComponent={
             !loading && query.length >= 2 ? (
-              <Text className="text-center text-gray-400 py-6">ไม่พบผลลัพธ์</Text>
+              <Text className="text-center font-sans text-gray-400 py-6">ไม่พบผลลัพธ์</Text>
             ) : null
           }
           style={{ maxHeight: Platform.OS === "ios" ? 240 : 260 }}

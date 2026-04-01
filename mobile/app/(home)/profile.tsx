@@ -21,7 +21,7 @@ export default function ProfileScreen() {
     onPress: () => void;
   }[] = [
     {
-      title: "โปรไฟล์ส่วนตัว",
+      title: "ข้อมูลส่วนตัว",
       icon: "person-outline",
       onPress: () => {
         router.push("/profile/edit");

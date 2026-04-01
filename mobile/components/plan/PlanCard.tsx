@@ -110,7 +110,7 @@ export default function PlanCard({ plan, index, onPress }: PlanCardProps) {
             </View>
 
             <View className="flex-row items-center">
-              <Ionicons name="people-outline" size={18} color="#fff" />
+              {/* <Ionicons name="people-outline" size={18} color="#fff" /> */}
               <Text className="text-white font-medium ml-1">
                 {group}
               </Text>

@@ -16,6 +16,7 @@
     "@gorhom/bottom-sheet": "^5.2.8",
     "@mapbox/polyline": "^1.2.1",
     "@react-native-community/datetimepicker": "^8.6.0",
+    "@react-native-community/slider": "^5.1.2",
     "@react-native-picker/picker": "2.11.1",
     "@react-navigation/bottom-tabs": "^7.4.0",
     "@react-navigation/elements": "^2.6.3",

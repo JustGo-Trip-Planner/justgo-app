@@ -22,7 +22,7 @@ function parsePlanEndDate(endDate?: string | null) {
 
 export async function archiveTrip(groupId: string) {
   const group = await GroupModel.findById(groupId);
-  
+
   if (!group) return null;
   if (!group.finalizedPlanId) return group;
   if (group.tripStatus !== "finalized") return group;
@@ -57,6 +57,7 @@ export async function archiveTrip(groupId: string) {
       end_date: plan.end_date,
       finalizedAt: group.finalizedAt,
       archivedAt: new Date(),
+      archiveReason: "completed",
     });
   }
 

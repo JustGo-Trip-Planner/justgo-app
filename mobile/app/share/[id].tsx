@@ -253,15 +253,15 @@ export default function GroupDetailScreen(){
 
           {/* META INFO */}
           <View className="flex-row items-center mt-3">
-            <Ionicons name="people-outline" size={18} color="#6B7280"/>
-            <Text className="ml-1 text-sm font-medium font-sans text-gray-600">
+            <Ionicons name="people" size={18} color="#6B7280"/>
+            <Text className="ml-1.5 text-sm font-medium font-sans text-gray-600">
               {(group.members?.length ?? 0) + 1} คน
             </Text>
 
             <View className="mx-2 w-1 h-1 bg-gray-400 rounded-full" />
 
-            <Ionicons name="calendar-outline" size={18} color="#6B7280"/>
-            <Text className="ml-1 text-sm font-medium font-sans text-gray-600">
+            <Ionicons name="calendar" size={18} color="#6B7280"/>
+            <Text className="ml-1.5 text-sm font-medium font-sans text-gray-600">
               สร้างกลุ่มเมื่อ {formatMonthYear(group.createdAt)}
             </Text>
           </View>

@@ -179,7 +179,7 @@ export default function EditGroupScreen() {
                 onPress={handleDeleteGroup}
                 className="flex-row items-center bg-red-500 px-4 py-3 rounded-2xl"
               >
-                <Ionicons name="trash-outline" size={18} color="#fff" />
+                <Ionicons name="trash" size={18} color="#fff" />
                 <Text className="ml-2 text-white font-medium">
                   ลบกลุ่ม
                 </Text>

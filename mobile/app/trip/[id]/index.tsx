@@ -100,11 +100,12 @@ export default function TripViewPlan() {
         },
         onPanResponderRelease: (_, g) => {
           const mid = (EXPANDED_TOP + COLLAPSED_TOP) / 2;
+          const currentTop = lastTop.current + g.dy;
 
           if (g.vy < -0.4) return snapTo(EXPANDED_TOP);
           if (g.vy > 0.4) return snapTo(COLLAPSED_TOP);
 
-          snapTo(lastTop.current < mid ? EXPANDED_TOP : COLLAPSED_TOP);
+          snapTo(currentTop < mid ? EXPANDED_TOP : COLLAPSED_TOP);
         },
       }),
     [topAnim]
@@ -147,6 +148,8 @@ export default function TripViewPlan() {
   const previewImage =
     plan.previewImage || "https://via.placeholder.com/1200x800?text=Trip+Plan";
 
+  const planName = plan?.trip_title || plan?.plan_name || "แผนการเดินทาง";
+
   return (
     <View className="flex-1 bg-white">
       <StatusBar barStyle="light-content" />
@@ -170,76 +173,43 @@ export default function TripViewPlan() {
           pointerEvents="none"
         />
 
-        {/* Top actions */}
-        <View className="absolute top-12 left-4 right-4 flex-row items-center justify-between">
-          <Pressable
-            onPress={() => router.replace("/(home)/mytrip")}
-            className="h-11 w-11 items-center justify-center rounded-full border border-white/20 bg-white/15"
-          >
-            <Ionicons name="chevron-back" size={24} color="#fff" />
-          </Pressable>
-
-          {!isViewOnly ? (
+        {/* Top actions + title */}
+        <View className="absolute top-14 left-4 right-4">
+          <View className="flex-row items-center">
             <Pressable
-              onPress={() => router.push(`/trip/${id}/edit`)}
-              className="flex-row items-center rounded-full border border-white/20 bg-white/15 px-4 py-2.5"
+              onPress={() => router.replace("/(home)/mytrip")}
+              className="h-11 w-11 items-center justify-center rounded-full border border-white/20 bg-white/15"
             >
-              <Ionicons name="create-outline" size={18} color="#fff" />
-              <Text className="ml-2 text-base font-semibold text-white">
-                แก้ไขแผน
-              </Text>
+              <Ionicons name="chevron-back" size={24} color="#fff" />
             </Pressable>
-          ) : (
-            <View className="rounded-full border border-white/15 bg-white/10 px-4 py-2.5">
-              <Text className="text-sm font-sans text-white/90">
-                โหมดดูอย่างเดียว
+
+            <View className="mx-3 flex-1">
+              <Text
+                numberOfLines={1}
+                ellipsizeMode="tail"
+                className="text-center text-xl font-semibold text-white/90"
+              >
+                {`รายละเอียด ${planName}`}
               </Text>
             </View>
-          )}
-        </View>
 
-        {/* Header info */}
-        <View className="absolute bottom-14 left-5 right-5">
-          <View className="overflow-hidden rounded-[28px] border border-white/15 bg-white/10 px-4 py-4">
-            <LinearGradient
-              colors={["rgba(255,255,255,0.10)", "rgba(255,255,255,0.03)"]}
-              className="absolute inset-0"
-              pointerEvents="none"
-            />
-
-            <Text className="text-sm font-sans text-white/80">แผนการเดินทาง</Text>
-
-            <Text
-              numberOfLines={2}
-              className="mt-1 text-2xl font-semibold text-white"
-            >
-              {plan.trip_title || "แผนการเดินทาง"}
-            </Text>
-
-            <View className="flex-row flex-wrap items-center">
-              <View className="mb-2 mr-2 flex-row items-center rounded-full border border-white/10 bg-white/12 px-3 py-1.5">
-                <Ionicons name="cash-outline" size={16} color="#fff" />
-                <Text className="ml-1 text-base font-medium text-white">
-                  {formatTHB(plan.total_budget || 0)}
+            {!isViewOnly ? (
+              <Pressable
+                onPress={() => router.push(`/trip/${id}/edit`)}
+                className="flex-row items-center rounded-full border border-white/20 bg-white/15 px-4 py-2.5"
+              >
+                <Ionicons name="create-outline" size={18} color="#fff" />
+                <Text className="ml-2 text-base font-semibold text-white">
+                  แก้ไขแผน
+                </Text>
+              </Pressable>
+            ) : (
+              <View className="rounded-full border border-white/15 bg-white/10 px-4 py-2.5">
+                <Text className="text-sm font-sans text-white/90">
+                  โหมดดูอย่างเดียว
                 </Text>
               </View>
-
-              <View className="mb-2 mr-2 flex-row items-center rounded-full border border-white/10 bg-white/12 px-3 py-1.5">
-                <Ionicons name="location-outline" size={16} color="#fff" />
-                <Text className="ml-1 text-base font-medium text-white">
-                  {plan.total_places || 0} สถานที่
-                </Text>
-              </View>
-
-              {!!plan.recommended_hotels?.[0]?.stars && (
-                <View className="mb-2 flex-row items-center rounded-full border border-white/10 bg-white/12 px-3 py-1.5">
-                  <Ionicons name="bed-outline" size={16} color="#fff" />
-                  <Text className="ml-1 text-base font-medium text-white">
-                    ระดับ {plan.recommended_hotels[0].stars} ดาว
-                  </Text>
-                </View>
-              )}
-            </View>
+            )}
           </View>
         </View>
       </View>

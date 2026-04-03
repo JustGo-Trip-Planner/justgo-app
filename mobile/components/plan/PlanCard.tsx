@@ -8,6 +8,22 @@ import axios from "axios";
 import { useAuth } from "@/context/AuthContext";
 import { usePlan, useSelectedPlan } from "@/context/PlanContext";
 
+interface DailyBudgetItem {
+  transportation?: number;
+  accommodation?: number;
+  food?: number;
+  others?: number;
+  total?: number;
+}
+
+interface ExpenseBreakdown {
+  transportation?: number;
+  accommodation?: number;
+  food?: number;
+  others?: number;
+  total?: number;
+}
+
 interface PlanCardProps {
   plan: {
     id: string;
@@ -18,11 +34,57 @@ interface PlanCardProps {
     start_date: string;
     end_date: string;
     total_budget: number;
+    total_expense_breakdown?: ExpenseBreakdown;
+    daily_budget?: DailyBudgetItem[];
     previewImage?: string;
+    daily_itinerary?: any[];
   };
   index: number;
   onPress: () => void;
 }
+
+const toNumber = (value: any) => {
+  const num = Number(value || 0);
+  return Number.isFinite(num) ? num : 0;
+};
+
+const calculateBudgetFromDailyBudget = (dailyBudget: DailyBudgetItem[] = []) => {
+  return (dailyBudget || []).reduce((sum, day) => {
+    const total = toNumber(day?.total);
+    if (total > 0) return sum + total;
+
+    return (
+      sum +
+      toNumber(day?.transportation) +
+      toNumber(day?.accommodation) +
+      toNumber(day?.food) +
+      toNumber(day?.others)
+    );
+  }, 0);
+};
+
+const resolveDisplayBudget = (sourcePlan?: any) => {
+  const dailyBudgetTotal = calculateBudgetFromDailyBudget(
+    sourcePlan?.daily_budget || []
+  );
+  if (dailyBudgetTotal > 0) return dailyBudgetTotal;
+
+  const breakdownTotal = toNumber(sourcePlan?.total_expense_breakdown?.total);
+  if (breakdownTotal > 0) return breakdownTotal;
+
+  return toNumber(sourcePlan?.total_budget);
+};
+
+const resolveDisplayTotalPlaces = (sourcePlan?: any) => {
+  const dailyItinerary = sourcePlan?.daily_itinerary || [];
+  if (Array.isArray(dailyItinerary) && dailyItinerary.length > 0) {
+    return dailyItinerary.reduce((sum: number, day: any) => {
+      return sum + ((day?.activities || []).length);
+    }, 0);
+  }
+
+  return toNumber(sourcePlan?.total_places);
+};
 
 export default function PlanCard({ plan, index, onPress }: PlanCardProps) {
   const router = useRouter();
@@ -34,16 +96,18 @@ export default function PlanCard({ plan, index, onPress }: PlanCardProps) {
 
   const {
     trip_title,
-    total_places,
     recommended_hotels,
     group,
     start_date,
     end_date,
-    total_budget,
     previewImage,
   } = plan;
 
   const hotelStars = recommended_hotels?.[0]?.stars || 3;
+
+  // ใช้ fullPlan ก่อน เพราะข้อมูลมักครบกว่า plan prop
+  const displayBudget = resolveDisplayBudget(fullPlan || plan);
+  const displayTotalPlaces = resolveDisplayTotalPlaces(fullPlan || plan);
 
   const handleSelect = async () => {
     try {
@@ -52,10 +116,16 @@ export default function PlanCard({ plan, index, onPress }: PlanCardProps) {
         return;
       }
 
-      const res = await axios.post(`${API_URL}/api/plan/save`, {
-        userId: user.id,
+      const mergedPlan = {
         ...basePlan,
         ...fullPlan,
+        total_budget: resolveDisplayBudget(fullPlan || plan),
+        total_places: resolveDisplayTotalPlaces(fullPlan || plan),
+      };
+
+      const res = await axios.post(`${API_URL}/api/plan/save`, {
+        userId: user.id,
+        ...mergedPlan,
       });
 
       console.log("✅ Plan saved:", res.data);
@@ -72,7 +142,6 @@ export default function PlanCard({ plan, index, onPress }: PlanCardProps) {
       onPress={onPress}
       className="mb-5 rounded-t-3xl overflow-hidden"
     >
-      {/* IMAGE */}
       <View className="h-52">
         <Image
           source={{ uri: previewImage }}
@@ -80,10 +149,8 @@ export default function PlanCard({ plan, index, onPress }: PlanCardProps) {
           resizeMode="cover"
         />
 
-        {/* OVERLAY */}
         <View className="absolute inset-0 bg-black/40" />
 
-        {/* CONTENT */}
         <View className="flex-1 justify-end px-4 py-2">
           <Text className="text-white text-xl font-semibold">
             {trip_title}
@@ -96,21 +163,20 @@ export default function PlanCard({ plan, index, onPress }: PlanCardProps) {
 
           <View className="flex-row flex-wrap mt-2 gap-3">
             <View className="flex-row items-center">
-              <Ionicons name="location-outline" size={18} color="#fff" />
+              <Ionicons name="location" size={18} color="#fff" />
               <Text className="text-white font-medium ml-1">
-                {total_places} สถานที่
+                {displayTotalPlaces} สถานที่
               </Text>
             </View>
 
             <View className="flex-row items-center">
-              <Ionicons name="bed-outline" size={18} color="#fff" />
+              <Ionicons name="bed" size={18} color="#fff" />
               <Text className="text-white font-medium ml-1">
                 ระดับ {hotelStars} ดาว
               </Text>
             </View>
 
             <View className="flex-row items-center">
-              {/* <Ionicons name="people-outline" size={18} color="#fff" /> */}
               <Text className="text-white font-medium ml-1">
                 {group}
               </Text>
@@ -118,15 +184,13 @@ export default function PlanCard({ plan, index, onPress }: PlanCardProps) {
           </View>
         </View>
 
-        {/* PRICE */}
         <View className="absolute top-3 right-3 bg-white/90 px-3 py-1 rounded-full">
           <Text className="text-gray-900 text-lg font-semibold">
-            ฿{total_budget.toLocaleString()}
+            ฿{displayBudget.toLocaleString("th-TH")}
           </Text>
         </View>
       </View>
 
-      {/* ACTIONS */}
       <View className="flex-row mt-3 gap-2 px-1">
         <TouchableOpacity
           onPress={handleSelect}

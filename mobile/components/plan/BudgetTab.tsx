@@ -42,8 +42,26 @@ export default function BudgetTab({ plan }: Props) {
     categories.map(() => new Animated.Value(0))
   ).current;
 
-  const totalBreakdown = plan?.total_expense_breakdown || {};
   const dailyBudget = plan?.daily_budget || [];
+  const totalBreakdown = dailyBudget.reduce(
+    (acc: any, day: any) => {
+      acc.transportation += Number(day?.transportation || 0);
+      acc.accommodation += Number(day?.accommodation || 0);
+      acc.food += Number(day?.food || 0);
+      acc.others += Number(day?.others || 0);
+      acc.total =
+        acc.transportation + acc.accommodation + acc.food + acc.others;
+      return acc;
+    },
+    {
+      transportation: 0,
+      accommodation: 0,
+      food: 0,
+      others: 0,
+      total: 0,
+    }
+  );
+
   const currentDay = dailyBudget?.[activeDay] || {
     transportation: 0,
     accommodation: 0,
@@ -97,7 +115,7 @@ export default function BudgetTab({ plan }: Props) {
           </View>
 
           <View className="h-14 w-14 items-center justify-center rounded-full border border-sky-100 bg-sky-50/70">
-            <Ionicons name="wallet-outline" size={26} color="#0369A1" />
+            <Ionicons name="wallet" size={26} color="#0369A1" />
           </View>
         </View>
       </View>
@@ -152,7 +170,11 @@ export default function BudgetTab({ plan }: Props) {
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{ paddingHorizontal: 2 }}
+            contentContainerStyle={{
+              paddingHorizontal: 2,
+              flexGrow: 1,
+              justifyContent: "center",
+            }}
           >
             {dailyBudget.map((_: any, idx: number) => {
               const active = activeDay === idx;

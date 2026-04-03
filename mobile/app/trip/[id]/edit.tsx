@@ -23,6 +23,7 @@ import DateTimePicker from "@react-native-community/datetimepicker";
 import ActivityTab from "@/components/plan/ActivityTab";
 import HotelTab, { Hotel } from "@/components/plan/HotelTab";
 import BudgetTab from "@/components/plan/BudgetEditTab";
+import { useEditPlanDraft } from "@/context/EditPlanContext";
 
 const FALLBACK_LAT = "13.736717";
 const FALLBACK_LNG = "100.523186";
@@ -75,9 +76,15 @@ const formatTHB = (value: any) => {
 
 const toNumber = (value: any) => {
   if (value === null || value === undefined || value === "") return 0;
-  const cleaned = String(value).replace(/[^0-9]/g, "");
+  const cleaned = String(value).replace(/[^0-9.-]/g, "");
   const parsed = Number(cleaned);
   return Number.isNaN(parsed) ? 0 : parsed;
+};
+
+const toFloatOrUndefined = (value: any) => {
+  if (value === null || value === undefined || value === "") return undefined;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : undefined;
 };
 
 const buildDefaultDailyBudget = (date = "") => ({
@@ -137,14 +144,41 @@ const normalizeBudgetData = (raw: any) => {
     };
   });
 
-  const total_expense_breakdown = daily_budget.reduce(
+  const total_expense_breakdown = calculateBudgetSummary(daily_budget);
+
+  return {
+    daily_budget,
+    total_expense_breakdown,
+    total_budget: total_expense_breakdown.total,
+  };
+};
+
+const normalizeHotelStars = (value: any) => {
+  const num = Number(value ?? 0);
+  if (!Number.isFinite(num) || num < 0) return 0;
+  if (num > 5) return 5;
+  return num;
+};
+
+const calculatePrimaryHotelStars = (hotels: any[] = []) => {
+  const firstHotel = Array.isArray(hotels) ? hotels[0] : null;
+  return normalizeHotelStars(firstHotel?.stars);
+};
+
+const calculateBudgetSummary = (dailyBudget: any[] = []) => {
+  return (dailyBudget || []).reduce(
     (acc: any, day: any) => {
-      acc.transportation += toNumber(day.transportation);
-      acc.accommodation += toNumber(day.accommodation);
-      acc.food += toNumber(day.food);
-      acc.others += toNumber(day.others);
-      acc.total =
-        acc.transportation + acc.accommodation + acc.food + acc.others;
+      const transportation = toNumber(day?.transportation);
+      const accommodation = toNumber(day?.accommodation);
+      const food = toNumber(day?.food);
+      const others = toNumber(day?.others);
+
+      acc.transportation += transportation;
+      acc.accommodation += accommodation;
+      acc.food += food;
+      acc.others += others;
+      acc.total = acc.transportation + acc.accommodation + acc.food + acc.others;
+
       return acc;
     },
     {
@@ -155,12 +189,13 @@ const normalizeBudgetData = (raw: any) => {
       total: 0,
     }
   );
+};
 
-  return {
-    daily_budget,
-    total_expense_breakdown,
-    total_budget: String(total_expense_breakdown.total),
-  };
+const calculateTotalPlaces = (dailyItinerary: any[] = []) => {
+  return (dailyItinerary || []).reduce((sum: number, day: any) => {
+    const activities = Array.isArray(day?.activities) ? day.activities : [];
+    return sum + activities.length;
+  }, 0);
 };
 
 const syncPlanDaysWithDateRange = (prev: any) => {
@@ -203,30 +238,43 @@ const syncPlanDaysWithDateRange = (prev: any) => {
     };
   });
 
-  const total_expense_breakdown = nextDailyBudget.reduce(
-    (acc: any, day: any) => {
-      acc.transportation += toNumber(day.transportation);
-      acc.accommodation += toNumber(day.accommodation);
-      acc.food += toNumber(day.food);
-      acc.others += toNumber(day.others);
-      acc.total =
-        acc.transportation + acc.accommodation + acc.food + acc.others;
-      return acc;
-    },
-    {
-      transportation: 0,
-      accommodation: 0,
-      food: 0,
-      others: 0,
-      total: 0,
-    }
-  );
+  const total_expense_breakdown = calculateBudgetSummary(nextDailyBudget);
 
   return {
     ...prev,
     daily_itinerary: nextDailyItinerary,
     daily_budget: nextDailyBudget,
     total_expense_breakdown,
+    total_budget: total_expense_breakdown.total,
+  };
+};
+
+const normalizeActivityFromAddedPayload = (parsed: any) => {
+  const entryFee = parsed?.entry_fee && typeof parsed.entry_fee === "object"
+    ? {
+        thai: toNumber(parsed.entry_fee?.thai),
+        foreigner: toNumber(parsed.entry_fee?.foreigner),
+      }
+    : { thai: 0, foreigner: 0 };
+
+  return {
+    place_id: parsed?.place_id || "",
+    place_name: String(parsed?.place_name || "").trim(),
+    address: String(parsed?.address || "").trim(),
+    lat: toFloatOrUndefined(parsed?.lat),
+    lng: toFloatOrUndefined(parsed?.lng),
+    image: String(parsed?.image || "").trim(),
+    entry_fee: entryFee,
+    open_time: String(parsed?.open_time || "-").trim() || "-",
+    close_time: String(parsed?.close_time || "-").trim() || "-",
+    time: String(parsed?.time || "06:00").trim() || "06:00",
+    rating: Number.isFinite(Number(parsed?.rating)) ? Number(parsed.rating) : 0,
+    review_count: toNumber(parsed?.review_count),
+    category: String(parsed?.category || "").trim(),
+    source: String(parsed?.source || "").trim(),
+    google_maps_url: String(parsed?.google_maps_url || "").trim(),
+    activity: String(parsed?.activity || "").trim(),
+    _localId: `local-${Date.now()}-${Math.random().toString(16).slice(2)}`,
   };
 };
 
@@ -234,6 +282,7 @@ export default function EditTripScreen() {
   const router = useRouter();
   const { id, added, addedHotel } = useLocalSearchParams<any>();
   const API_URL = Constants.expoConfig?.extra?.API_URL;
+  const { getDraft, setDraft, clearDraft } = useEditPlanDraft();
 
   const [plan, setPlan] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -283,15 +332,27 @@ export default function EditTripScreen() {
   }, [infoExpanded, infoAnim]);
 
   useEffect(() => {
+    if (!id || !plan) return;
+    setDraft(String(id), plan);
+  }, [id, plan, setDraft]);
+
+  useEffect(() => {
     if (!id || hasFetched.current) return;
     hasFetched.current = true;
+
+    const existingDraft = getDraft(String(id));
+    if (existingDraft) {
+      setPlan(existingDraft);
+      setLoading(false);
+      return;
+    }
 
     const fetchPlan = async () => {
       try {
         const res = await axios.get<any>(`${API_URL}/api/plan/${id}`);
         const budgetState = normalizeBudgetData(res.data);
 
-        const safe = syncPlanDaysWithDateRange({
+        const syncedPlan = syncPlanDaysWithDateRange({
           ...res.data,
           ...budgetState,
           trip_title: res.data.trip_title ?? "",
@@ -302,6 +363,17 @@ export default function EditTripScreen() {
               ...day,
               activities: (day.activities || []).map((a: any, idx: number) => ({
                 ...a,
+                entry_fee:
+                  a?.entry_fee && typeof a.entry_fee === "object"
+                    ? {
+                        thai: toNumber(a.entry_fee?.thai),
+                        foreigner: toNumber(a.entry_fee?.foreigner),
+                      }
+                    : { thai: 0, foreigner: 0 },
+                lat: toFloatOrUndefined(a?.lat),
+                lng: toFloatOrUndefined(a?.lng),
+                rating: Number.isFinite(Number(a?.rating)) ? Number(a.rating) : 0,
+                review_count: toNumber(a?.review_count),
                 _localId: `${a.place_id || a.place_name}-${dayIdx}-${idx}-${Date.now()}`,
               })),
             })
@@ -314,7 +386,20 @@ export default function EditTripScreen() {
           ),
         });
 
+        const safeHotels = (syncedPlan.recommended_hotels || []).map((hotel: any) => ({
+          ...hotel,
+          stars: normalizeHotelStars(hotel?.stars),
+        }));
+
+        const safe = {
+          ...syncedPlan,
+          recommended_hotels: safeHotels,
+          total_places: calculateTotalPlaces(syncedPlan.daily_itinerary),
+          hotel_stars: calculatePrimaryHotelStars(safeHotels),
+        };
+
         setPlan(safe);
+        setDraft(String(id), safe);
       } catch (e) {
         Alert.alert("โหลดแผนไม่สำเร็จ");
       } finally {
@@ -323,7 +408,7 @@ export default function EditTripScreen() {
     };
 
     fetchPlan();
-  }, [id, API_URL]);
+  }, [id, API_URL, getDraft, setDraft]);
 
   useEffect(() => {
     if (!plan) return;
@@ -333,6 +418,46 @@ export default function EditTripScreen() {
       setActiveDay(maxDay);
     }
   }, [plan?.daily_itinerary?.length, activeDay, plan]);
+
+  useEffect(() => {
+    if (!plan) return;
+
+    const normalizedHotels = (plan.recommended_hotels || []).map((hotel: any) => ({
+      ...hotel,
+      stars: normalizeHotelStars(hotel?.stars),
+    }));
+
+    const nextHotelStars = calculatePrimaryHotelStars(normalizedHotels);
+
+    const starsChanged =
+      JSON.stringify(plan.recommended_hotels || []) !== JSON.stringify(normalizedHotels);
+
+    if (!starsChanged && (plan.hotel_stars ?? 0) === nextHotelStars) return;
+
+    setPlan((prev: any) => {
+      if (!prev) return prev;
+
+      const prevNormalizedHotels = (prev.recommended_hotels || []).map((hotel: any) => ({
+        ...hotel,
+        stars: normalizeHotelStars(hotel?.stars),
+      }));
+
+      const prevHotelStars = calculatePrimaryHotelStars(prevNormalizedHotels);
+
+      const noHotelChange =
+        JSON.stringify(prev.recommended_hotels || []) === JSON.stringify(prevNormalizedHotels);
+
+      if (noHotelChange && (prev.hotel_stars ?? 0) === prevHotelStars) {
+        return prev;
+      }
+
+      return {
+        ...prev,
+        recommended_hotels: prevNormalizedHotels,
+        hotel_stars: prevHotelStars,
+      };
+    });
+  }, [plan?.recommended_hotels, plan?.hotel_stars]);
 
   useEffect(() => {
     if (!added || !plan) return;
@@ -355,26 +480,34 @@ export default function EditTripScreen() {
           activities: [],
         };
 
-        const exists = (day.activities || []).some(
-          (a: any) => a.place_id === parsed.place_id
-        );
+        const normalizedActivity = normalizeActivityFromAddedPayload(parsed);
+
+        const exists = (day.activities || []).some((a: any) => {
+          if (normalizedActivity.place_id && a.place_id) {
+            return String(a.place_id) === String(normalizedActivity.place_id);
+          }
+
+          return (
+            String(a.place_name || "").trim().toLowerCase() ===
+              String(normalizedActivity.place_name || "").trim().toLowerCase() &&
+            String(a.time || "") === String(normalizedActivity.time || "")
+          );
+        });
+
         if (exists) return prev;
 
-        const newActivity = {
-          ...parsed,
-          _localId: `local-${Date.now()}-${Math.random()
-            .toString(16)
-            .slice(2)}`,
-        };
-
-        const merged = [...(day.activities || []), newActivity].sort(
+        const merged = [...(day.activities || []), normalizedActivity].sort(
           (a: any, b: any) =>
             String(a.time || "00:00").localeCompare(String(b.time || "00:00"))
         );
 
         nextDaily[dayIndex] = { ...day, activities: merged };
 
-        return { ...prev, daily_itinerary: nextDaily };
+        return {
+          ...prev,
+          daily_itinerary: nextDaily,
+          total_places: calculateTotalPlaces(nextDaily),
+        };
       });
 
       router.setParams({ added: undefined } as any);
@@ -382,6 +515,25 @@ export default function EditTripScreen() {
       console.log("added parse error", e);
     }
   }, [added, plan, router]);
+
+  useEffect(() => {
+    if (!plan) return;
+
+    const nextTotalPlaces = calculateTotalPlaces(plan.daily_itinerary || []);
+    if ((plan.total_places ?? 0) === nextTotalPlaces) return;
+
+    setPlan((prev: any) => {
+      if (!prev) return prev;
+
+      const recalculated = calculateTotalPlaces(prev.daily_itinerary || []);
+      if ((prev.total_places ?? 0) === recalculated) return prev;
+
+      return {
+        ...prev,
+        total_places: recalculated,
+      };
+    });
+  }, [plan?.daily_itinerary, plan?.total_places]);
 
   useEffect(() => {
     if (!addedHotel || !plan) return;
@@ -399,11 +551,15 @@ export default function EditTripScreen() {
           ...parsed,
           _localId: parsed._localId || `hotel-${Date.now()}`,
           price_per_night: Number(parsed.price_per_night ?? 0),
+          stars: normalizeHotelStars(parsed.stars),
         };
+
+        const nextHotels = [newHotel];
 
         return {
           ...prev,
-          recommended_hotels: [newHotel],
+          recommended_hotels: nextHotels,
+          hotel_stars: calculatePrimaryHotelStars(nextHotels),
         };
       });
 
@@ -417,10 +573,15 @@ export default function EditTripScreen() {
 
   const removeHotel = (localId: string) => {
     setPlan((prev: any) => {
-      const next = (prev?.recommended_hotels || []).filter(
+      const nextHotels = (prev?.recommended_hotels || []).filter(
         (h: any) => h._localId !== localId
       );
-      return { ...prev, recommended_hotels: next };
+
+      return {
+        ...prev,
+        recommended_hotels: nextHotels,
+        hotel_stars: calculatePrimaryHotelStars(nextHotels),
+      };
     });
   };
 
@@ -541,9 +702,8 @@ export default function EditTripScreen() {
   const savePlan = async () => {
     try {
       const title = String(plan?.trip_title ?? "").trim();
-      const budgetNumber = Number(
-        String(plan?.total_budget ?? "").replace(/,/g, "").trim()
-      );
+      const computedBudgetSummary = calculateBudgetSummary(plan?.daily_budget || []);
+      const budgetNumber = computedBudgetSummary.total;
 
       if (!title) {
         Alert.alert("กรุณากรอกชื่อแผน");
@@ -567,22 +727,62 @@ export default function EditTripScreen() {
 
       setSaving(true);
 
+      const normalizedHotelsForSave = (plan?.recommended_hotels || [])
+        .slice(0, 1)
+        .map((hotel: any) => ({
+          ...hotel,
+          stars: normalizeHotelStars(hotel?.stars),
+        }));
+
+      const computedHotelStars = calculatePrimaryHotelStars(normalizedHotelsForSave);
+      const computedTotalPlaces = calculateTotalPlaces(plan?.daily_itinerary || []);
+
       const cleaned = {
         ...plan,
         trip_title: title,
         total_budget: budgetNumber,
+        total_places: computedTotalPlaces,
+        hotel_stars: computedHotelStars,
+        total_expense_breakdown: computedBudgetSummary,
+        daily_budget: (plan.daily_budget || []).map((d: any) => {
+          const transportation = toNumber(d?.transportation);
+          const accommodation = toNumber(d?.accommodation);
+          const food = toNumber(d?.food);
+          const others = toNumber(d?.others);
+
+          return {
+            ...d,
+            transportation,
+            accommodation,
+            food,
+            others,
+            total: transportation + accommodation + food + others,
+          };
+        }),
         daily_itinerary: (plan.daily_itinerary || []).map((d: any) => ({
           ...d,
-          activities: (d.activities || []).map(
-            ({ _localId, ...rest }: any) => rest
-          ),
+          activities: (d.activities || []).map(({ _localId, ...rest }: any) => ({
+            ...rest,
+            lat: toFloatOrUndefined(rest?.lat),
+            lng: toFloatOrUndefined(rest?.lng),
+            rating: Number.isFinite(Number(rest?.rating)) ? Number(rest.rating) : 0,
+            review_count: toNumber(rest?.review_count),
+            entry_fee:
+              rest?.entry_fee && typeof rest.entry_fee === "object"
+                ? {
+                    thai: toNumber(rest.entry_fee?.thai),
+                    foreigner: toNumber(rest.entry_fee?.foreigner),
+                  }
+                : { thai: 0, foreigner: 0 },
+          })),
         })),
-        recommended_hotels: (plan.recommended_hotels || [])
-          .slice(0, 1)
-          .map(({ _localId, ...rest }: any) => rest),
+        recommended_hotels: normalizedHotelsForSave.map(
+          ({ _localId, ...rest }: any) => rest
+        ),
       };
 
       await axios.put(`${API_URL}/api/plan/${id}`, cleaned);
+      clearDraft(String(id));
       Alert.alert("บันทึกสำเร็จ");
       router.replace(`/trip/${id}`);
     } catch (e) {
@@ -600,6 +800,8 @@ export default function EditTripScreen() {
     );
   }
 
+  const computedBudget = calculateBudgetSummary(plan?.daily_budget || []);
+  const displayTotalBudget = computedBudget.total;
   const indicatorTranslateX = tabAnim.interpolate({
     inputRange: [0, 1, 2],
     outputRange: [0, tabWidth, tabWidth * 2],
@@ -623,15 +825,18 @@ export default function EditTripScreen() {
           />
           <View className="absolute inset-0 bg-black/30" />
 
-          <View className="absolute top-12 left-4 right-4 z-30 flex-row items-center justify-between">
+          <View className="absolute top-14 left-4 right-4 z-30 flex-row items-center justify-between">
             <Pressable
-              onPress={() => router.replace(`/trip/${id}`)}
+              onPress={() => {
+                clearDraft(String(id));
+                router.replace(`/trip/${id}`);
+              }}
               className="h-11 w-11 items-center justify-center rounded-full bg-white/25"
             >
               <Ionicons name="chevron-back" size={24} color="#fff" />
             </Pressable>
 
-            <Text className="text-lg font-semibold text-white">แก้ไขแผน</Text>
+            <Text className="text-xl font-semibold text-white/90">แก้ไขแผน</Text>
 
             <View className="w-11" />
           </View>
@@ -673,7 +878,7 @@ export default function EditTripScreen() {
                       {formatThaiDate(plan.start_date)} - {formatThaiDate(plan.end_date)}
                     </Text>
                     <Text className="mt-1 text-base font-medium text-gray-600">
-                      งบประมาณรวม {formatTHB(plan.total_budget)}
+                      งบประมาณรวม {formatTHB(displayTotalBudget)}
                     </Text>
                   </View>
 
@@ -741,7 +946,7 @@ export default function EditTripScreen() {
                     <View className="flex-row items-center rounded-2xl border border-gray-200 bg-gray-100 px-4 py-3">
                       <Ionicons name="wallet-outline" size={18} color="#6b7280" />
                       <Text className="flex-1 px-3 text-base font-medium text-gray-900">
-                        {formatTHB(plan.total_budget)}
+                        {formatTHB(displayTotalBudget)}
                       </Text>
                     </View>
                   </View>

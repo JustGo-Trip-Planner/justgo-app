@@ -128,7 +128,7 @@ export default function GroupCard({
           onPress={() => onPressDetail?.(group)}
           className="bg-orange-500 px-5 py-3 rounded-full flex-row items-center"
         >
-          <Ionicons name="eye-outline" size={18} color="#fff" />
+          <Ionicons name="eye" size={18} color="#fff" />
 
           <Text className="ml-2 text-white font-medium text-base">
             ดูรายละเอียด
@@ -141,7 +141,7 @@ export default function GroupCard({
             className="p-2"
           >
             <Ionicons
-              name="trash-outline"
+              name="trash"
               size={22}
               color="#EF4444"
             />

@@ -9,7 +9,9 @@ import {
   deletePlanById,
   getCurrentPlans,
   getHistoryPlans,
-  reusePlan
+  reusePlan,
+  startGeneratePlans,
+  getGeneratePlansStatus
 } from "../controllers/planController";
 import { verifyToken } from "../middlewares/auth";
 
@@ -17,6 +19,8 @@ const router = Router();
 
 // public
 router.post("/generate", generatePlans);
+router.post("/generate/start", startGeneratePlans);
+router.get("/generate/status/:jobId", getGeneratePlansStatus);
 
 // protected routes
 router.get("/", verifyToken, getSavedPlans);

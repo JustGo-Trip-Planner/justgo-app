@@ -11,15 +11,17 @@ export interface Hotel {
   category: string;
 }
 
+export interface EntryFee {
+  thai: number;
+  foreigner: number;
+}
+
 export interface Activity {
   time: string;
   place_name: string;
   category: string;
   rating: number;
-  entry_fee?: {
-    thai: number;
-    foreigner: number;
-  };
+  entry_fee?: EntryFee;
   open_time?: string;
   close_time?: string;
   activity?: string;
@@ -42,6 +44,15 @@ export interface ExpenseBreakdown {
   total: number;
 }
 
+export interface DailyBudget {
+  date: string;
+  transportation: number;
+  accommodation: number;
+  food: number;
+  others: number;
+  total: number;
+}
+
 export interface Plan {
   trip_title: string;
   start_date: string;
@@ -50,7 +61,7 @@ export interface Plan {
   total_places: number;
   recommended_hotels: Hotel[];
   daily_itinerary: DayItinerary[];
-  daily_budget?: any[];
+  daily_budget?: DailyBudget[];
   total_expense_breakdown: ExpenseBreakdown;
   route_description?: Record<string, string>;
 }

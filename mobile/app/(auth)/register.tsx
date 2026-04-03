@@ -102,7 +102,7 @@ export default function RegisterScreen() {
               placeholder="กรอกที่อยู่อีเมลของคุณ"
               keyboardType="email-address"
               autoCapitalize="none"
-              className="bg-white border border-gray-300 rounded-xl px-4 py-3 mb-4"
+              className="font-sans bg-white border border-gray-300 rounded-xl px-4 py-3 mb-4"
             />
 
             {/* Password */}
@@ -114,7 +114,7 @@ export default function RegisterScreen() {
                 placeholder="กรอกรหัสผ่านของคุณ"
                 secureTextEntry={!showPassword}
                 autoCapitalize="none"
-                className="bg-white border border-gray-300 rounded-xl px-4 py-3 pr-10"
+                className="font-sans bg-white border border-gray-300 rounded-xl px-4 py-3 pr-10"
               />
               <TouchableOpacity
                 onPress={() => setShowPassword(!showPassword)}
@@ -137,7 +137,7 @@ export default function RegisterScreen() {
                 placeholder="กรอกยืนยันรหัสผ่านของคุณ"
                 secureTextEntry={!showConfirm}
                 autoCapitalize="none"
-                className="bg-white border border-gray-300 rounded-xl px-4 py-3 pr-10"
+                className="font-sans bg-white border border-gray-300 rounded-xl px-4 py-3 pr-10"
               />
               <TouchableOpacity
                 onPress={() => setShowConfirm(!showConfirm)}

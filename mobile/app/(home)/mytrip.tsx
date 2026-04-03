@@ -110,16 +110,13 @@ export default function MyTrip() {
     <View className="flex-1 justify-center items-center px-6">
 
       <View className="w-full items-center bg-white/80 rounded-3xl px-6 py-10">
-        <View className="bg-orange-100 p-5 rounded-full">
-          <Ionicons name="map-outline" size={40} color="#f97316" />
-        </View>
+          <Ionicons name="map" size={40} color="#9CA3AF" />
 
         <Text className="mt-5 text-xl font-semibold text-gray-800 text-center">
           ยังไม่มีแผนการเดินทาง
         </Text>
 
         <Text className="mt-2 text-center text-gray-500 font-medium leading-5">
-          คุณยังไม่ได้สร้างแผนการเดินทาง{"\n"}
           เริ่มวางแผนทริปแรกของคุณได้เลย
         </Text>
 
@@ -127,7 +124,7 @@ export default function MyTrip() {
           onPress={() => router.push("/")}
           className="mt-6 bg-orange-500 px-6 py-3 rounded-full flex-row items-center"
         >
-          <Ionicons name="add" size={18} color="white" />
+          <Ionicons name="add-circle" size={20} color="white" />
           <Text className="ml-2 text-white font-semibold">
             สร้างแผนใหม่
           </Text>
@@ -140,28 +137,15 @@ export default function MyTrip() {
     <View className="flex-1 justify-center items-center px-6">
 
       <View className="w-full items-center bg-white/80 rounded-3xl px-6 py-10">
-        <View className="bg-sky-100 p-5 rounded-full">
-          <Ionicons name="time-outline" size={40} color="#0284c7" />
-        </View>
-
+          <Ionicons name="archive" size={40} color="#9CA3AF" />
         <Text className="mt-5 text-xl font-semibold text-gray-800 text-center">
           ยังไม่มีประวัติการเดินทาง
         </Text>
 
         <Text className="mt-2 text-center text-gray-500 font-medium leading-5">
-          เมื่อคุณเดินทางเสร็จแล้ว{"\n"}
-          ทริปจะถูกบันทึกไว้ที่นี่
+          เมื่อคุณเดินทางเสร็จแล้ว ทริปจะถูกบันทึกไว้ที่นี่
         </Text>
 
-        <Pressable
-          onPress={() => setTab("current")}
-          className="mt-6 bg-sky-600 px-6 py-3 rounded-full flex-row items-center"
-        >
-          <Ionicons name="airplane-outline" size={18} color="white" />
-          <Text className="ml-2 text-white font-semibold">
-            ดูแผนปัจจุบัน
-          </Text>
-        </Pressable>
       </View>
     </View>
   );

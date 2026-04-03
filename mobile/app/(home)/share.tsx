@@ -42,6 +42,8 @@ export default function ShareScreen() {
   );
 
   useEffect(() => {
+    let cancelled = false;
+
     const loadProgress = async () => {
       const result = await Promise.all(
         (groups || []).map(async (g) => {
@@ -62,16 +64,28 @@ export default function ShareScreen() {
         })
       );
 
-      setGroupsProgress(result);
+      if (!cancelled) {
+        setGroupsProgress(result);
+      }
     };
 
-    if (groups?.length) {
-      loadProgress();
+    if (!groups?.length) {
+      setGroupsProgress([]);
+      return;
     }
-  }, [groups]);
+
+    loadProgress();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [groups, API_URL]);
 
   const handleDeleteGroup = async (group: Group) => {
-    if (group.owner?._id !== user?.id) {
+    const currentUserId = String((user as any)?.id || (user as any)?._id || "");
+    const ownerId = String(group.owner?._id || "");
+
+    if (!currentUserId || ownerId !== currentUserId) {
       Alert.alert("ไม่มีสิทธิ์", "เฉพาะเจ้าของกลุ่มเท่านั้นที่ลบได้");
       return;
     }
@@ -83,10 +97,23 @@ export default function ShareScreen() {
         style: "destructive",
         onPress: async () => {
           try {
+            // optimistic remove
+            setGroupsProgress((prev) => prev.filter((g) => g._id !== group._id));
+
             await axios.delete(`${API_URL}/api/groups/${group._id}`);
             await refreshGroups();
-          } catch {
-            Alert.alert("ลบกลุ่มไม่สำเร็จ");
+
+            Alert.alert("สำเร็จ", "ลบกลุ่มเรียบร้อยแล้ว");
+          } catch (err: any) {
+            console.log("delete group error:", err?.response?.data || err?.message || err);
+
+            // โหลดใหม่คืน state ให้ตรงกับ backend
+            await refreshGroups();
+
+            Alert.alert(
+              "ลบกลุ่มไม่สำเร็จ",
+              err?.response?.data?.message || "เกิดข้อผิดพลาดในการลบกลุ่ม"
+            );
           }
         },
       },
@@ -142,9 +169,9 @@ export default function ShareScreen() {
                 onPress={() => router.push("/share/create-group")}
                 className="flex-row items-center bg-sky-700 px-4 py-2 rounded-full"
               >
-                <Ionicons name="add" size={20} color="white" />
+                <Ionicons name="add-circle" size={20} color="white" />
 
-                <Text className="text-white ml-1 font-medium">
+                <Text className="text-white ml-1.5 font-medium">
                   สร้างกลุ่ม
                 </Text>
               </Pressable>
@@ -157,9 +184,7 @@ export default function ShareScreen() {
             ) : groupsProgress.length === 0 ? (
               <View className="flex-1 justify-center items-center px-6">
                 <View className="w-full bg-white/80 rounded-3xl py-10 px-6 items-center">
-
-                  <Ionicons name="people-outline" size={40} color="#9CA3AF" />
-
+                  <Ionicons name="people" size={40} color="#9CA3AF" />
                   <Text className="mt-4 text-xl font-semibold text-gray-800 text-center">
                     ยังไม่มีกลุ่ม
                   </Text>
@@ -189,7 +214,7 @@ export default function ShareScreen() {
                     <GroupCard
                       key={group._id}
                       group={group}
-                      isOwner={group.owner?._id === user?.id}
+                      isOwner={String(group.owner?._id || "") === String((user as any)?.id || (user as any)?._id || "")}
                       onPressDetail={(g) =>
                         router.push(`/share/${g._id}`)
                       }
@@ -227,7 +252,7 @@ export default function ShareScreen() {
           {/* SHARED PLANS */}
           <View className="px-6">
             <View className="flex-row items-center mb-4">
-              <Ionicons name="map-outline" size={20} color="#111827" />
+              <Ionicons name="map-outline" size={28} color="#111827" />
 
               <Text className="text-2xl font-semibold text-gray-900 ml-2">
                 แผนการเดินทางที่แชร์
@@ -238,7 +263,7 @@ export default function ShareScreen() {
               <View className="flex-1 justify-center items-center">
                 <View className="w-full bg-white/80 rounded-3xl py-10 px-6 items-center">
 
-                  <Ionicons name="map-outline" size={40} color="#9CA3AF" />
+                  <Ionicons name="map" size={40} color="#9CA3AF" />
 
                   <Text className="mt-4 text-xl font-semibold text-gray-800 text-center">
                     ยังไม่มีแผนที่แชร์

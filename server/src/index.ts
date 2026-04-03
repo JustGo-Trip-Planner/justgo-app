@@ -6,7 +6,7 @@ import { startCronJobs } from "./cron";
 
 import provinceRoutes from "./routes/provinceRoutes";
 import planRoutes from "./routes/planRoutes";
-import authRoutes from './routes/auth';
+import authRoutes from './routes/authRoutes';
 import userRoutes from './routes/userRoutes';
 import groupRoutes from "./routes/groupRoutes";
 import uploadRoutes from './routes/upload';

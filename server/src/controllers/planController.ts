@@ -5,6 +5,49 @@ import { Plan } from "../types/response";
 import config from "../config";
 import { AuthRequest } from "../middlewares/auth";
 
+const normalizeHotelStars = (value: any) => {
+  const num = Number(value ?? 0);
+  if (!Number.isFinite(num) || num < 0) return 0;
+  if (num > 5) return 5;
+  return num;
+};
+
+const calculateTotalPlaces = (dailyItinerary: any[] = []) => {
+  return (dailyItinerary || []).reduce((sum: number, day: any) => {
+    const activities = Array.isArray(day?.activities) ? day.activities : [];
+    return sum + activities.length;
+  }, 0);
+};
+
+const calculatePrimaryHotelStars = (hotels: any[] = []) => {
+  const firstHotel = Array.isArray(hotels) ? hotels[0] : null;
+  return normalizeHotelStars(firstHotel?.stars);
+};
+
+const normalizePlanBeforeSave = (raw: any) => {
+  const recommended_hotels = Array.isArray(raw?.recommended_hotels)
+    ? raw.recommended_hotels.slice(0, 1).map((hotel: any) => ({
+        ...hotel,
+        stars: normalizeHotelStars(hotel?.stars),
+      }))
+    : [];
+
+  const daily_itinerary = Array.isArray(raw?.daily_itinerary)
+    ? raw.daily_itinerary.map((day: any) => ({
+        ...day,
+        activities: Array.isArray(day?.activities) ? day.activities : [],
+      }))
+    : [];
+
+  return {
+    ...raw,
+    recommended_hotels,
+    daily_itinerary,
+    total_places: calculateTotalPlaces(daily_itinerary),
+    hotel_stars: calculatePrimaryHotelStars(recommended_hotels),
+  };
+};
+
 // ส่ง request ไป FastAPI เพื่อ generate plans preview
 export async function generatePlans(req: Request, res: Response) {
   try {
@@ -24,6 +67,8 @@ export async function generatePlans(req: Request, res: Response) {
       num_plans,
     } = req.body;
 
+    const safeNumPlans = Math.max(1, Math.min(3, Number(num_plans || 1)));
+
     const payload = {
       province: province_name || province_id,
       start_date,
@@ -35,7 +80,8 @@ export async function generatePlans(req: Request, res: Response) {
       activities,
       budget_type,
       budget_amount,
-      num_plans: num_plans || 1,
+      plan_name,
+      num_plans: safeNumPlans,
     };
 
     console.log("generatePlans payload:", payload);
@@ -45,20 +91,92 @@ export async function generatePlans(req: Request, res: Response) {
       payload,
       {
         headers: { "Content-Type": "application/json" },
-        timeout: 100000,
+        timeout: 190000,
         responseType: "json",
       }
     );
 
     const result = response.data;
-    const plans = result?.plans ?? [];
+    const plans = Array.isArray(result?.plans) ? result.plans : [];
 
     return res.status(200).json({ plans });
   } catch (err: any) {
-    console.error("Error in generatePlans:", err.message || err);
-    return res.status(500).json({ error: "Failed to preview plans",
+    console.error("Error in generatePlans:", err?.response?.data || err.message || err);
+    return res.status(500).json({
+      error: "Failed to preview plans",
       message: err?.response?.data?.detail || err.message,
-     });
+    });
+  }
+}
+
+export async function startGeneratePlans(req: Request, res: Response) {
+  try {
+    const {
+      province_id,
+      province_name,
+      start_date,
+      end_date,
+      group_type,
+      friend_count,
+      family,
+      interests,
+      activities,
+      budget_type,
+      budget_amount,
+      plan_name,
+      num_plans,
+    } = req.body;
+
+    const safeNumPlans = Math.max(1, Math.min(3, Number(num_plans || 1)));
+
+    const payload = {
+      province: province_name || province_id,
+      start_date,
+      end_date,
+      group_type,
+      friend_count,
+      family,
+      interests,
+      activities,
+      budget_type,
+      budget_amount,
+      plan_name,
+      num_plans: safeNumPlans,
+    };
+
+    const response = await axios.post(
+      `${config.RAG_URL}/api/plan/generate/start`,
+      payload,
+      {
+        headers: { "Content-Type": "application/json" },
+        timeout: 30000,
+      }
+    );
+
+    return res.status(200).json(response.data);
+  } catch (err: any) {
+    return res.status(500).json({
+      error: "Failed to start generate plans",
+      message: err?.response?.data?.detail || err.message,
+    });
+  }
+}
+
+export async function getGeneratePlansStatus(req: Request, res: Response) {
+  try {
+    const { jobId } = req.params;
+
+    const response = await axios.get(
+      `${config.RAG_URL}/api/plan/generate/status/${jobId}`,
+      { timeout: 30000 }
+    );
+
+    return res.status(200).json(response.data);
+  } catch (err: any) {
+    return res.status(500).json({
+      error: "Failed to get generate status",
+      message: err?.response?.data?.detail || err.message,
+    });
   }
 }
 
@@ -69,7 +187,8 @@ export async function savePlan(req: AuthRequest, res: Response) {
       return res.status(401).json({ message: "Unauthorized" });
     }
 
-    const fullPlan = req.body;
+    const fullPlan = normalizePlanBeforeSave(req.body);
+
     const newPlan = new PlanModel({
       ...fullPlan,
       user: req.userId,
@@ -137,18 +256,19 @@ export const getMyPlans = async (req: AuthRequest, res: Response) => {
 // PUT: Update plan by ID
 export const updatePlanById = async (req: Request, res: Response) => {
   const { id } = req.params;
-  const updatedData = req.body;
-  
+
   try {
+    const updatedData = normalizePlanBeforeSave(req.body);
+
     const updatedPlan = await PlanModel.findByIdAndUpdate(id, updatedData, {
       new: true,
       runValidators: true,
     });
-    
+
     if (!updatedPlan) {
       return res.status(404).json({ message: "Plan not found" });
     }
-    
+
     res.json({ success: true, data: updatedPlan });
   } catch (error) {
     res.status(500).json({ success: false, message: "Update failed", error });

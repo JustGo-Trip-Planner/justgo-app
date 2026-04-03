@@ -69,7 +69,7 @@ export default function PlanCard({
               onPress={() => onDelete(plan)}
               className="absolute top-3 right-3 w-9 h-9 rounded-full bg-black/40 items-center justify-center"
             >
-              <Ionicons name="trash-outline" size={18} color="#fff" />
+              <Ionicons name="trash" size={18} color="#fff" />
             </Pressable>
           )}
 
@@ -81,7 +81,7 @@ export default function PlanCard({
             </Text>
 
             <View className="flex-row items-center mt-1">
-              <Ionicons name="calendar-outline" size={14} color="#fff"/>
+              <Ionicons name="calendar" size={14} color="#fff"/>
               <Text className="ml-1 text-white font-medium font-sans">
                 {formatThaiDateRange(plan.start_date, plan.end_date)}
               </Text>
@@ -136,7 +136,7 @@ export default function PlanCard({
             onPress={onPress}
             className="flex-row items-center px-3 py-1.5 bg-gray-100 rounded-full"
           >
-            <Ionicons name="eye-outline" size={16} color="#374151"/>
+            <Ionicons name="eye" size={16} color="#374151"/>
             <Text className="ml-1 text-gray-700 text-sm font-medium font-sans">
               ดูแผน
             </Text>
@@ -147,7 +147,7 @@ export default function PlanCard({
               onPress={() => onReuse?.(plan)}
               className="flex-row items-center px-3 py-1.5 bg-sky-100 rounded-lg"
             >
-              <Ionicons name="refresh-outline" size={16} color="#3262AB"/>
+              <Ionicons name="refresh" size={16} color="#3262AB"/>
               <Text className="ml-1 text-sky-700 text-sm font-medium font-sans">
                 นำกลับ
               </Text>

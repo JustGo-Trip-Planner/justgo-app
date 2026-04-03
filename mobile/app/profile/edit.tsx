@@ -169,7 +169,7 @@ export default function EditProfileScreen() {
       >
 
         {/* HEADER */}
-        <View className="flex-row justify-between items-center mb-6">
+        <View className="flex-row justify-between items-center pt-4 mb-6">
           <TouchableOpacity onPress={() => router.back()}>
             <Ionicons name="chevron-back" size={26} />
           </TouchableOpacity>
@@ -178,10 +178,10 @@ export default function EditProfileScreen() {
 
           {!isEditing ? (
             <TouchableOpacity onPress={() => setIsEditing(true)}>
-              <Ionicons name="create-outline" size={24} />
+              <Ionicons name="create-outline" size={30} />
             </TouchableOpacity>
           ) : (
-            <View style={{ width: 22 }} />
+            <View style={{ width: 30 }} />
           )}
         </View>
 

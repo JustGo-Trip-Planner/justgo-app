@@ -95,7 +95,7 @@ export default function PreferenceScreen(){
         <Pressable
           onPress={() => setTab("interest")}
           className={`flex-1 py-2 rounded-full items-center ${
-            tab === "interest" ? "bg-orange-400":""
+            tab === "interest" ? "bg-orange-500":""
           }`}
         >
           <Text className={`text-base font-medium ${
@@ -108,7 +108,7 @@ export default function PreferenceScreen(){
         <Pressable
           onPress={()=> setTab("activity")}
           className={`flex-1 py-2 rounded-full items-center ${
-            tab==="activity" ? "bg-orange-400":""
+            tab==="activity" ? "bg-orange-500":""
           }`}
         >
           <Text className={`text-base font-medium ${

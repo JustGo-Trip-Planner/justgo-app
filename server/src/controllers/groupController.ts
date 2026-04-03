@@ -9,8 +9,9 @@ import GroupPlanModel from "../models/groupPlanModel";
 import VoteModel from "../models/voteModel";
 import NotificationModel from "../models/notificationModel";
 
-function getParam(param: string | string[]): string {
-  return Array.isArray(param) ? param[0] : param;
+function getParam(param: string | string[] | undefined): string {
+  if (Array.isArray(param)) return param[0] ?? "";
+  return param ?? "";
 }
 
 export const createGroup = async (req: AuthRequest, res: Response) => {
@@ -143,6 +144,13 @@ export const getMyGroups = async (req: AuthRequest, res: Response) => {
 
       result.push({
         ...g.toObject(),
+        owner: g.owner
+          ? {
+              _id: (g.owner as any)._id,
+              first_name: (g.owner as any).first_name || "",
+              avatar: (g.owner as any).avatar || "",
+            }
+          : undefined,
         members: g.members.map((m: any) => ({
           ...m,
           avatar: m.avatar || m.userId?.avatar || "",
@@ -245,8 +253,19 @@ export const inviteMember = async (req: AuthRequest, res: Response) => {
     const group = await GroupModel.findById(groupId);
     if (!group) return res.status(404).json({ message: "Group not found" });
 
-    if (String(group.owner) !== String(req.userId)) {
-      return res.status(403).json({ message: "Only owner can invite" });
+    const isOwner = String(group.owner) === String(req.userId);
+    const isMember = group.members.some(
+      (m: any) =>
+        String(m.userId) === String(req.userId) &&
+        m.status === "accepted"
+    );
+
+    if (!isOwner && !isMember) {
+      return res.status(403).json({ message: "Forbidden" });
+    }
+
+    if (String(userId) === String(group.owner)) {
+      return res.status(400).json({ message: "Cannot invite owner" });
     }
 
     const exists = group.members.find(
@@ -254,7 +273,12 @@ export const inviteMember = async (req: AuthRequest, res: Response) => {
     );
 
     if (exists) {
-      return res.status(400).json({ message: "User already in group or invited" });
+      return res.status(400).json({ message: "User already invited or in group" });
+    }
+
+    const pending = group.members.find((m: any) => String(m.userId) === String(userId) && m.status === "pending");
+    if (pending) {
+      return res.status(400).json({ message: "Already invited (pending)" });
     }
 
     // add to group members
@@ -299,8 +323,16 @@ export const removeInviteMember = async (req: AuthRequest, res: Response) => {
     if (!group)
       return res.status(404).json({ message: "Group not found" });
 
-    if (String(group.owner) !== String(req.userId))
-      return res.status(403).json({ message: "Only owner can remove invite" });
+    const isOwner = String(group.owner) === String(req.userId);
+    const isMember = group.members.some(
+      (m: any) =>
+        String(m.userId) === String(req.userId) &&
+        m.status === "accepted"
+    );
+
+    if (!isOwner && !isMember) {
+      return res.status(403).json({ message: "Forbidden" });
+    }
 
     const result = await GroupModel.updateOne(
       {
@@ -407,7 +439,11 @@ export const deleteGroup = async (req: AuthRequest, res: Response) => {
   try {
     if (!req.userId) return res.status(401).json({ message: "Unauthorized" });
 
-    const { id } = req.params;
+    const id = getParam(req.params.id);
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: "Invalid group id" });
+    }
 
     const group = await GroupModel.findById(id);
     if (!group) return res.status(404).json({ message: "Group not found" });
@@ -416,15 +452,19 @@ export const deleteGroup = async (req: AuthRequest, res: Response) => {
       return res.status(403).json({ message: "Forbidden" });
     }
 
-    await GroupModel.deleteOne({ _id: id });
     await GroupPlanModel.deleteMany({ groupId: id });
     await VoteModel.deleteMany({ groupId: id });
     await GroupTripHistoryModel.deleteMany({ groupId: id });
     await NotificationModel.deleteMany({ groupId: id });
+    await GroupModel.deleteOne({ _id: id });
 
     return res.json({ success: true });
-  } catch (e) {
-    return res.status(500).json({ message: "Delete group failed", error: e });
+  } catch (e: any) {
+    console.log("deleteGroup error:", e);
+    return res.status(500).json({
+      message: "Delete group failed",
+      error: e?.message || e,
+    });
   }
 };
 

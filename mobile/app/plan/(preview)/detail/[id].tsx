@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
   Dimensions,
   ScrollView,
   StatusBar,
+  ActivityIndicator,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
@@ -20,10 +21,10 @@ import ItineraryTab from "@/components/plan/ItineraryTab";
 import BudgetTab from "@/components/plan/BudgetTab";
 import SelectButton from "@/components/plan/SelectButton";
 
-const { height: SCREEN_H } = Dimensions.get("window");
+const { height: SCREEN_H, width: SCREEN_W } = Dimensions.get("window");
 
-const HEADER_H = 270;
-const COLLAPSED_TOP = HEADER_H - 46;
+const HEADER_H = 290;
+const COLLAPSED_TOP = HEADER_H - 54;
 const EXPANDED_TOP = 100;
 
 const TABS = ["ภาพรวม", "แผนเที่ยว", "งบประมาณ"] as const;
@@ -34,10 +35,23 @@ export default function PlanDetailPage() {
   const plan = useSelectedPlan(id);
 
   const [activeTab, setActiveTab] = useState(0);
-  const buttonVisible = useRef(new Animated.Value(0)).current;
 
   const topAnim = useRef(new Animated.Value(COLLAPSED_TOP)).current;
   const lastTop = useRef(COLLAPSED_TOP);
+  const tabAnim = useRef(new Animated.Value(0)).current;
+
+  const tabOuterWidth = SCREEN_W - 32;
+  const tabWidth = (tabOuterWidth - 8) / 3;
+
+  useEffect(() => {
+    Animated.spring(tabAnim, {
+      toValue: activeTab,
+      useNativeDriver: true,
+      damping: 18,
+      stiffness: 180,
+      mass: 0.8,
+    }).start();
+  }, [activeTab, tabAnim]);
 
   const snapTo = (to: number) => {
     Animated.spring(topAnim, {
@@ -49,18 +63,6 @@ export default function PlanDetailPage() {
     }).start(() => {
       lastTop.current = to;
     });
-  };
-
-  const handleScroll = (e: any) => {
-    const { layoutMeasurement, contentOffset, contentSize } = e.nativeEvent;
-    const isBottom =
-      layoutMeasurement.height + contentOffset.y >= contentSize.height - 50;
-
-    Animated.timing(buttonVisible, {
-      toValue: isBottom ? 1 : 0,
-      duration: 250,
-      useNativeDriver: true,
-    }).start();
   };
 
   const panResponder = useMemo(
@@ -76,131 +78,162 @@ export default function PlanDetailPage() {
         },
         onPanResponderRelease: (_, g) => {
           const mid = (EXPANDED_TOP + COLLAPSED_TOP) / 2;
+
           if (g.vy < -0.4) return snapTo(EXPANDED_TOP);
           if (g.vy > 0.4) return snapTo(COLLAPSED_TOP);
+
           snapTo(lastTop.current < mid ? EXPANDED_TOP : COLLAPSED_TOP);
         },
       }),
-    []
+    [topAnim]
   );
 
-  if (!plan) {
+  if (plan === undefined) {
     return (
       <View className="flex-1 items-center justify-center bg-white">
-        <Text className="text-gray-500">ไม่พบข้อมูลแผนการเดินทาง</Text>
+        <View className="h-16 w-16 items-center justify-center rounded-full bg-sky-50/80">
+          <ActivityIndicator size="large" color="#0369A1" />
+        </View>
+        <Text className="mt-3 text-sm font-sans text-gray-500">
+          กำลังโหลดแผนการเดินทาง
+        </Text>
       </View>
     );
   }
+
+  if (!plan) {
+    return (
+      <View className="flex-1 items-center justify-center bg-white px-6">
+        <View className="h-16 w-16 items-center justify-center rounded-full bg-gray-100/90">
+          <Ionicons name="document-text-outline" size={28} color="#9CA3AF" />
+        </View>
+        <Text className="mt-4 text-lg font-semibold text-gray-900">
+          ไม่พบข้อมูลแผนการเดินทาง
+        </Text>
+        <Text className="mt-2 text-center text-sm font-sans leading-5 text-gray-500">
+          แผนนี้อาจถูกลบ หรือไม่สามารถเข้าถึงได้ในขณะนี้
+        </Text>
+      </View>
+    );
+  }
+
+  const indicatorTranslateX = tabAnim.interpolate({
+    inputRange: [0, 1, 2],
+    outputRange: [0, tabWidth, tabWidth * 2],
+  });
+
+  const previewImage =
+    plan.previewImage || "https://via.placeholder.com/1200x800?text=Trip+Plan";
+
+  const planName = plan.trip_title || plan.plan_name || "แผนการเดินทาง";
 
   return (
     <View className="flex-1 bg-white">
       <StatusBar barStyle="light-content" />
 
-      {/* ================= Header Image ================= */}
+      {/* Header */}
       <View className="relative w-full bg-black" style={{ height: HEADER_H }}>
         <Image
-          source={{ uri: plan.previewImage }}
-          className="w-full h-full"
+          source={{ uri: previewImage }}
+          className="h-full w-full"
           resizeMode="cover"
         />
 
-        {/* Gradient Shadow */}
         <LinearGradient
           colors={[
-            "rgba(0,0,0,0.6)",
-            "rgba(0,0,0,0.15)",
-            "rgba(0,0,0,0.65)",
+            "rgba(0,0,0,0.72)",
+            "rgba(0,0,0,0.20)",
+            "rgba(0,0,0,0.82)",
           ]}
-          locations={[0, 0.55, 1]}
+          locations={[0, 0.48, 1]}
           className="absolute inset-0"
           pointerEvents="none"
         />
 
-        {/* Top Bar */}
+        {/* Top actions */}
         <View className="absolute top-6 left-4 right-4 flex-row items-center">
           <Pressable
             onPress={() => router.back()}
-            className="w-12 h-12 rounded-full bg-white/25 items-center justify-center"
+            className="h-11 w-11 items-center justify-center rounded-full border border-white/20 bg-white/15"
           >
-            <Ionicons name="chevron-back" size={26} color="#fff" />
+            <Ionicons name="chevron-back" size={24} color="#fff" />
           </Pressable>
 
           <Text
             numberOfLines={1}
-            className="ml-6 text-white text-2xl font-medium"
+            className="ml-6 flex-1 text-xl font-semibold text-white/90"
           >
-            รายละเอียด
+            รายละเอียด {planName}
           </Text>
         </View>
       </View>
 
-      {/* ================= Draggable Sheet ================= */}
+      {/* Bottom sheet */}
       <Animated.View
-        className="absolute left-0 right-0 bg-white rounded-t-3xl shadow-xl overflow-hidden"
+        className="absolute left-0 right-0 overflow-hidden rounded-t-[30px] bg-white shadow-xl"
         style={{
           top: topAnim,
           height: SCREEN_H - EXPANDED_TOP + 40,
         }}
       >
-        {/* Drag Handle */}
+        {/* Handle */}
         <View
           {...panResponder.panHandlers}
           className="items-center pt-3 pb-2"
         >
-          <View className="w-12 h-1.5 rounded-full bg-gray-300" />
+          <View className="h-1.5 w-12 rounded-full bg-gray-300/90" />
         </View>
 
-        {/* Title */}
-        <Text
-          numberOfLines={1}
-          className="text-center text-lg font-semibold mb-2"
-        >
-          {plan.trip_title}
-        </Text>
-
         {/* Tabs */}
-        <View className="flex-row justify-around border-b border-gray-200 px-4">
-          {TABS.map((label, idx) => {
-            const active = idx === activeTab;
-            return (
-              <Pressable
-                key={label}
-                onPress={() => setActiveTab(idx)}
-                className="items-center py-3 px-3"
-              >
-                <Text
-                  className={`font-medium ${
-                    active ? "text-blue-600" : "text-gray-500"
-                  }`}
-                >
-                  {label}
-                </Text>
+        <View className="px-4 pb-3">
+          <View className="relative overflow-hidden rounded-full border border-gray-100 bg-gray-100/90 p-1">
+            <Animated.View
+              style={{
+                width: tabWidth,
+                transform: [{ translateX: indicatorTranslateX }],
+              }}
+              className="absolute left-1 top-1 bottom-1 rounded-full border border-sky-100 bg-white/95 shadow"
+            />
 
-                <View
-                  className={`mt-2 h-1 w-24 rounded-full ${
-                    active ? "bg-blue-600 w-10" : "bg-transparent w-10"
-                  }`}
-                />
-              </Pressable>
-            );
-          })}
+            <View className="flex-row">
+              {TABS.map((label, idx) => {
+                const active = idx === activeTab;
+
+                return (
+                  <Pressable
+                    key={label}
+                    onPress={() => setActiveTab(idx)}
+                    className="z-10 flex-1 items-center py-2.5"
+                  >
+                    <Text
+                      className={`text-base ${
+                        active
+                          ? "font-semibold text-sky-700"
+                          : "font-medium text-gray-500"
+                      }`}
+                    >
+                      {label}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </View>
         </View>
 
         {/* Content */}
         <ScrollView
-          className="bg-white"
-          contentContainerStyle={{ paddingBottom: 160 }}
+          className="flex-1 bg-white"
+          contentContainerStyle={{ paddingBottom: 140 }}
           showsVerticalScrollIndicator={false}
-          onScroll={handleScroll}
-          scrollEventThrottle={16}
         >
           {activeTab === 0 && <OverviewTab plan={plan} />}
           {activeTab === 1 && <ItineraryTab plan={plan} />}
           {activeTab === 2 && <BudgetTab plan={plan} />}
         </ScrollView>
-        
       </Animated.View>
-        <SelectButton planId={id} />
+
+      <SelectButton planId={id} />
     </View>
   );
 }

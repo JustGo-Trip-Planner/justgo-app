@@ -37,6 +37,7 @@ export default function EditGroupScreen() {
 
   const API_URL = Constants.expoConfig?.extra?.API_URL;
 
+  const [group, setGroup] = useState<any>(null);
   const [groupName, setGroupName] = useState("");
   const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
@@ -45,6 +46,7 @@ export default function EditGroupScreen() {
   const [deadline, setDeadline] = useState<Date | null>(null);
   const [deadlineOpen, setDeadlineOpen] = useState(false);
   const [deadlineEnabled, setDeadlineEnabled] = useState(false);
+  const isOwner = group?.owner?._id === user?.id;
 
   useEffect(() => {
     if (!id) return;
@@ -54,6 +56,7 @@ export default function EditGroupScreen() {
         const res = await axios.get<Group>(`${API_URL}/api/groups/${id}`);
         const group = res.data;
 
+        setGroup(group);
         setGroupName(group.name);
         setMembers(group.members ?? []);
         setDeadline(group.votingDeadline ? new Date(group.votingDeadline) : null);
@@ -113,6 +116,33 @@ export default function EditGroupScreen() {
     }
   };
 
+  const handleDeleteGroup = async () => {
+    if (!isOwner) {
+      Alert.alert("ไม่มีสิทธิ์", "เฉพาะเจ้าของกลุ่มเท่านั้นที่ลบได้");
+      return;
+    }
+
+    Alert.alert(
+      "ลบกลุ่ม",
+      "คุณต้องการลบกลุ่มนี้หรือไม่?",
+      [
+        { text: "ยกเลิก", style: "cancel" },
+        {
+          text: "ลบ",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await axios.delete(`${API_URL}/api/groups/${id}`);
+              router.replace("/share");
+            } catch {
+              Alert.alert("ลบกลุ่มไม่สำเร็จ");
+            }
+          },
+        },
+      ]
+    );
+  };
+
   if (loading) {
     return (
       <View className="flex-1 justify-center items-center">
@@ -130,17 +160,32 @@ export default function EditGroupScreen() {
       <View className="flex-1 pt-14 px-5">
 
         {/* HEADER */}
-        <View className="flex-row items-center mb-6">
-          <Pressable
-            onPress={() => router.back()}
-            className="w-10 h-10 rounded-full bg-white items-center justify-center mr-3 shadow"
-          >
-            <Ionicons name="chevron-back" size={22} />
-          </Pressable>
+        <View className="flex-row items-center justify-between mb-6">
+          <View className="flex-row items-center">
+            <Pressable
+              onPress={() => router.back()}
+              className="w-10 h-10 rounded-full bg-white items-center justify-center mr-3 shadow"
+            >
+              <Ionicons name="chevron-back" size={22} />
+            </Pressable>
+            <Text className="text-xl font-semibold text-gray-900">
+              แก้ไขกลุ่ม
+            </Text>
+          </View>
 
-          <Text className="text-xl font-semibold text-gray-900">
-            แก้ไขกลุ่ม
-          </Text>
+          {isOwner && (
+            <View className="items-center mt-4">
+              <Pressable
+                onPress={handleDeleteGroup}
+                className="flex-row items-center bg-red-500 px-4 py-3 rounded-2xl"
+              >
+                <Ionicons name="trash" size={18} color="#fff" />
+                <Text className="ml-2 text-white font-medium">
+                  ลบกลุ่ม
+                </Text>
+              </Pressable>
+            </View>
+          )}
         </View>
 
         <ScrollView
@@ -206,7 +251,7 @@ export default function EditGroupScreen() {
             <View className="flex-row items-center justify-between mb-3">
 
               <Text className="text-xl font-semibold text-gray-900">
-                วันหมดเขตโหวต
+                วันปิดโหวต
               </Text>
 
               <Pressable
@@ -227,7 +272,7 @@ export default function EditGroupScreen() {
               <Pressable
                 onPress={() => setDeadlineOpen(true)}
                 className="bg-gray-100 px-4 py-3 rounded-xl flex-row items-center justify-between"
-              >
+                >
 
                 <Text className="font-sans text-gray-800">
                   {deadline
@@ -239,7 +284,7 @@ export default function EditGroupScreen() {
                   name="calendar-outline"
                   size={20}
                   color="#6B7280"
-                />
+                  />
 
               </Pressable>
             )}
@@ -256,7 +301,7 @@ export default function EditGroupScreen() {
           <Pressable
             onPress={() => router.back()}
             className="flex-1 bg-gray-200 py-4 rounded-2xl items-center mr-3"
-          >
+            >
             <Text className="font-semibold text-gray-700">
               ยกเลิก
             </Text>

@@ -94,9 +94,9 @@ export default function SubmittedPlanCard({
 
         <View className="flex-row items-center mt-2">
 
-          <Ionicons name="calendar-outline" size={15} color="#6B7280" />
+          <Ionicons name="calendar" size={15} color="#6B7280" />
 
-          <Text className="ml-1 text-sm text-gray-500 font-sans font-medium">
+          <Text className="ml-1.5 text-sm text-gray-500 font-sans font-medium">
             {formatDate(plan.start_date, plan.end_date)}
           </Text>
 
@@ -106,10 +106,10 @@ export default function SubmittedPlanCard({
 
         <View className="flex-row items-center mt-1">
 
-          <Ionicons name="wallet-outline" size={15} color="#6B7280" />
+          <Ionicons name="wallet" size={15} color="#6B7280" />
 
-          <Text className="ml-1 text-sm text-gray-500 font-sans font-medium">
-            ประมาณ ฿{plan.total_budget.toLocaleString()}
+          <Text className="ml-1.5 text-sm text-gray-500 font-sans font-medium">
+            งบประมาณ ฿{plan.total_budget.toLocaleString()}
           </Text>
 
         </View>

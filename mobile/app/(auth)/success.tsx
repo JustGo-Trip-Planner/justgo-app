@@ -45,7 +45,7 @@ export default function SuccessScreen() {
         <View className="bg-white/70 p-6 rounded-2xl w-full max-w-sm items-center">
           <Text className="text-3xl font-semibold text-center mb-8 text-gray-900">สร้างบัญชีสำเร็จ!</Text>
           <Text className="text-xl font-semibold text-center mb-2 text-gray-900">คุณได้สร้างบัญชีเรียบร้อยแล้ว</Text>
-          <Text className="text-gray-700 font-sans text-center mb-6">หลังจากนี้ คุณสามารถสร้างวางแผนได้โดยทันทีตามต้องการ</Text>
+          <Text className="text-gray-700 font-sans text-center mb-6">หลังจากนี้ คุณสามารถสร้างวางแผนได้{"\n"}โดยทันทีตามต้องการ</Text>
 
           <TouchableOpacity
             disabled={loading}

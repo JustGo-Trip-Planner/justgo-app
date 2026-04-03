@@ -21,7 +21,7 @@ export default function ProfileScreen() {
     onPress: () => void;
   }[] = [
     {
-      title: "โปรไฟล์ส่วนตัว",
+      title: "ข้อมูลส่วนตัว",
       icon: "person-outline",
       onPress: () => {
         router.push("/profile/edit");
@@ -34,19 +34,14 @@ export default function ProfileScreen() {
         router.push("/profile/preference");
       },
     },
-    {
-      title: "ภาษา",
-      icon: "globe-outline",
-      onPress: () => {},
-    },
   ];
 
   return (
     <ScrollView className="flex-1 bg-gray-50">
       {/* HEADER */}
-      <View className="flex-row items-center justify-center px-4 pt-6 pb-4">
-        <Text className="text-base text-center font-semibold text-gray-900">
-          โปรไฟล์
+      <View className="flex-row items-center justify-center px-4 pt-16 pb-4">
+        <Text className="text-2xl text-center font-semibold text-gray-900">
+          โปรไฟล์ของคุณ
         </Text>
       </View>
 

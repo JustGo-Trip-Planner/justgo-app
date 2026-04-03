@@ -30,9 +30,6 @@ function InnerPlan() {
               {province ?? "เลือกแผนการเดินทางของคุณ"}
             </Text>
           </View>
-          <TouchableOpacity className="p-2">
-            <Ionicons name="search-outline" size={24} color="#666" />
-          </TouchableOpacity>
         </View>
       )}
 

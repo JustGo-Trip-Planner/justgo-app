@@ -1,16 +1,17 @@
-import { View, Text, Pressable, Animated, StyleSheet } from "react-native";
+import { View, Text, Pressable, Animated } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { use, useEffect, useRef } from "react";
+import { useEffect, useRef } from "react";
 import Constants from "expo-constants";
 import axios from "axios";
 import { useRouter } from "expo-router";
 import { usePlan, useSelectedPlan } from "@/context/PlanContext";
 import { useAuth } from "@/context/AuthContext";
+import { LinearGradient } from "expo-linear-gradient";
 
 export default function SelectButton({ planId }: { planId: string }) {
   const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(20)).current;
-  
+  const slideAnim = useRef(new Animated.Value(30)).current;
+
   const API_URL = Constants.expoConfig?.extra?.API_URL;
   const router = useRouter();
   const { user } = useAuth();
@@ -33,15 +34,14 @@ export default function SelectButton({ planId }: { planId: string }) {
 
   const handlePlan = async () => {
     try {
-      if (!user) {
-        return null;
-      }
-      
+      if (!user) return;
+
       const res = await axios.post(`${API_URL}/api/plan/save`, {
         userId: user.id,
         ...plan,
-        ...fullPlan
+        ...fullPlan,
       });
+
       console.log("✅ Plan saved:", res.data);
       router.push("/(home)/mytrip");
     } catch (error) {
@@ -51,48 +51,36 @@ export default function SelectButton({ planId }: { planId: string }) {
 
   return (
     <Animated.View
-      style={[
-        styles.fabWrapper,
-        {
-          opacity: fadeAnim,
-          transform: [{ translateY: slideAnim }],
-        },
-      ]}
+      className="absolute bottom-0 left-0 right-0 z-50"
+      style={{
+        opacity: fadeAnim,
+        transform: [{ translateY: slideAnim }],
+      }}
     >
-      <Pressable onPress={handlePlan} style={styles.fab}>
-        <Ionicons name="location-outline" size={22} color="#fff" />
-        <Text style={styles.fabText}>เลือกแผนการเดินทางนี้</Text>
-      </Pressable>
+      <LinearGradient
+        colors={[
+          "transparent",
+          "rgba(255,255,255,0.7)",
+          "rgba(255,255,255,0.95)",
+        ]}
+        locations={[0, 0.5, 1]}
+        className="pt-16 pb-6 px-5"
+      >
+        <View className="bg-white/60 backdrop-blur-xl rounded-2xl p-2">
+
+          {/* CTA BUTTON */}
+          <Pressable
+            onPress={handlePlan}
+            className="flex-row items-center justify-center gap-2 py-3 rounded-xl bg-orange-500"
+          >
+            <Ionicons name="location-outline" size={22} color="#fff" />
+            <Text className="text-white text-base font-semibold">
+              เลือกแผนการเดินทางนี้
+            </Text>
+          </Pressable>
+
+        </View>
+      </LinearGradient>
     </Animated.View>
   );
 }
-
-const styles = StyleSheet.create({
-  fabWrapper: {
-    position: "absolute",
-    bottom: 24,
-    left: 20,
-    right: 20,
-    alignItems: "center",
-    zIndex: 50,
-  },
-  fab: {
-    backgroundColor: "#f97316",
-    paddingVertical: 14,
-    paddingHorizontal: 24,
-    borderRadius: 999,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    shadowColor: "#000",
-    shadowOpacity: 0.15,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 5,
-  },
-  fabText: {
-    color: "white",
-    fontSize: 16,
-    fontWeight: "600",
-  },
-});

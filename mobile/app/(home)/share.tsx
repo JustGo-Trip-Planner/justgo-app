@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useRef, useState, useEffect } from "react";
 import {
   ScrollView,
   View,
@@ -29,14 +29,67 @@ export default function ShareScreen() {
 
   const scrollRef = useRef<ScrollView>(null);
   const [index, setIndex] = useState(0);
+  const [groupsProgress, setGroupsProgress] = useState<Group[]>([]);
 
   useFocusEffect(
     useCallback(() => {
-      refreshGroups();
-    }, [refreshGroups])
+      const load = async () => {
+        await refreshGroups();
+      };
+
+      load();
+    }, [])
   );
 
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadProgress = async () => {
+      const result = await Promise.all(
+        (groups || []).map(async (g) => {
+          try {
+            const res = await axios.get<any>(`${API_URL}/api/groups/${g._id}/voting-state`);
+            const p = res.data.progress;
+
+            return {
+              ...g,
+              voteProgress: {
+                voted: p.completedVoters,
+                total: p.eligibleCount,
+              },
+            };
+          } catch {
+            return g;
+          }
+        })
+      );
+
+      if (!cancelled) {
+        setGroupsProgress(result);
+      }
+    };
+
+    if (!groups?.length) {
+      setGroupsProgress([]);
+      return;
+    }
+
+    loadProgress();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [groups, API_URL]);
+
   const handleDeleteGroup = async (group: Group) => {
+    const currentUserId = String((user as any)?.id || (user as any)?._id || "");
+    const ownerId = String(group.owner?._id || "");
+
+    if (!currentUserId || ownerId !== currentUserId) {
+      Alert.alert("ไม่มีสิทธิ์", "เฉพาะเจ้าของกลุ่มเท่านั้นที่ลบได้");
+      return;
+    }
+
     Alert.alert("ลบกลุ่ม", "คุณต้องการลบกลุ่มนี้หรือไม่?", [
       { text: "ยกเลิก", style: "cancel" },
       {
@@ -44,10 +97,23 @@ export default function ShareScreen() {
         style: "destructive",
         onPress: async () => {
           try {
+            // optimistic remove
+            setGroupsProgress((prev) => prev.filter((g) => g._id !== group._id));
+
             await axios.delete(`${API_URL}/api/groups/${group._id}`);
             await refreshGroups();
-          } catch {
-            Alert.alert("ลบกลุ่มไม่สำเร็จ");
+
+            Alert.alert("สำเร็จ", "ลบกลุ่มเรียบร้อยแล้ว");
+          } catch (err: any) {
+            console.log("delete group error:", err?.response?.data || err?.message || err);
+
+            // โหลดใหม่คืน state ให้ตรงกับ backend
+            await refreshGroups();
+
+            Alert.alert(
+              "ลบกลุ่มไม่สำเร็จ",
+              err?.response?.data?.message || "เกิดข้อผิดพลาดในการลบกลุ่ม"
+            );
           }
         },
       },
@@ -80,9 +146,9 @@ export default function ShareScreen() {
       className="flex-1"
     >
       <View className="flex-1">
-        <HomeScroll contentPaddingBottom={120}>
+        <HomeScroll contentPaddingBottom={80}>
           {/* HEADER */}
-          <View className="px-6 pt-4 mb-6">
+          <View className="px-6 mb-6">
             <Text className="text-2xl font-semibold text-sky-700">
               แชร์แผนการเดินทาง
             </Text>
@@ -103,9 +169,9 @@ export default function ShareScreen() {
                 onPress={() => router.push("/share/create-group")}
                 className="flex-row items-center bg-sky-700 px-4 py-2 rounded-full"
               >
-                <Ionicons name="add" size={20} color="white" />
+                <Ionicons name="add-circle" size={20} color="white" />
 
-                <Text className="text-white ml-1 font-medium">
+                <Text className="text-white ml-1.5 font-medium">
                   สร้างกลุ่ม
                 </Text>
               </Pressable>
@@ -115,13 +181,19 @@ export default function ShareScreen() {
               <View className="py-16 items-center">
                 <ActivityIndicator />
               </View>
-            ) : groups.length === 0 ? (
-              <View className="py-16 items-center">
-                <Ionicons name="people-outline" size={34} color="#9CA3AF" />
+            ) : groupsProgress.length === 0 ? (
+              <View className="flex-1 justify-center items-center px-6">
+                <View className="w-full bg-white/80 rounded-3xl py-10 px-6 items-center">
+                  <Ionicons name="people" size={40} color="#9CA3AF" />
+                  <Text className="mt-4 text-xl font-semibold text-gray-800 text-center">
+                    ยังไม่มีกลุ่ม
+                  </Text>
 
-                <Text className="text-gray-500 font-medium mt-3">
-                  ยังไม่มีกลุ่ม
-                </Text>
+                  <Text className="mt-2 text-gray-500 font-medium text-center leading-5">
+                    สร้างกลุ่มเพื่อเริ่มวางแผน และโหวตแผนกับเพื่อน
+                  </Text>
+
+                </View>
               </View>
             ) : (
               <View>
@@ -138,11 +210,11 @@ export default function ShareScreen() {
                     paddingRight: 12,
                   }}
                 >
-                  {groups.map((group) => (
+                  {groupsProgress.map((group) => (
                     <GroupCard
                       key={group._id}
                       group={group}
-                      isOwner={group.owner === user?.id}
+                      isOwner={String(group.owner?._id || "") === String((user as any)?.id || (user as any)?._id || "")}
                       onPressDetail={(g) =>
                         router.push(`/share/${g._id}`)
                       }
@@ -154,7 +226,7 @@ export default function ShareScreen() {
                 {/* DOT PAGINATION */}
 
                 <View className="flex-row justify-center mt-4">
-                  {groups.map((_, i) => {
+                  {groupsProgress.map((_, i) => {
                     const active = i === index;
 
                     return (
@@ -180,7 +252,7 @@ export default function ShareScreen() {
           {/* SHARED PLANS */}
           <View className="px-6">
             <View className="flex-row items-center mb-4">
-              <Ionicons name="map-outline" size={20} color="#111827" />
+              <Ionicons name="map-outline" size={28} color="#111827" />
 
               <Text className="text-2xl font-semibold text-gray-900 ml-2">
                 แผนการเดินทางที่แชร์
@@ -188,17 +260,25 @@ export default function ShareScreen() {
             </View>
 
             {finalizedPlans.length === 0 ? (
-              <View className="py-16 items-center">
-                <Ionicons name="map-outline" size={34} color="#9CA3AF" />
+              <View className="flex-1 justify-center items-center">
+                <View className="w-full bg-white/80 rounded-3xl py-10 px-6 items-center">
 
-                <Text className="text-gray-500 font-medium mt-3">
-                  ยังไม่มีแผนที่แชร์
-                </Text>
+                  <Ionicons name="map" size={40} color="#9CA3AF" />
+
+                  <Text className="mt-4 text-xl font-semibold text-gray-800 text-center">
+                    ยังไม่มีแผนที่แชร์
+                  </Text>
+
+                  <Text className="mt-2 text-gray-500 font-medium text-center leading-5">
+                    เมื่อมีการแชร์แผนแผนจะปรากฏที่นี่
+                  </Text>
+
+                </View>
               </View>
             ) : (
               finalizedPlans.map((plan) => (
                 <PlanCard
-                  key={plan._id}
+                  key={plan._id || `${plan.trip_title}-${index}`}
                   plan={plan}
                   groupName={plan.groupName}
                   members={plan.members}

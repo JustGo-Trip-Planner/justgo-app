@@ -63,11 +63,6 @@ export default function BudgetScreen() {
       icon: <FontAwesome5 name="crown" size={20} color="#3262AB" />,
       description: "ใช้งบแบบจัดเต็ม พร้อมประสบการณ์คุณภาพสูง",
     },
-    {
-      label: "ยืดหยุ่น",
-      icon: <Entypo name="adjust" size={22} color="#3262AB" />,
-      description: "จัดการงบเองได้ตามต้องการ ไม่จำกัดงบ",
-    },
   ];
 
   return (

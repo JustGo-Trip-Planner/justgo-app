@@ -59,6 +59,10 @@ const PlanSchema = new mongoose.Schema({
   end_date: String,
   total_budget: Number,
   total_places: Number,
+  hotel_stars: {
+    type: Number,
+    default: 0,
+  },
 
   recommended_hotels: [HotelSchema],
   daily_itinerary: [DailyItinerarySchema],

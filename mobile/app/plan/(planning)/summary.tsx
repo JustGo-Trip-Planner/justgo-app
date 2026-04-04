@@ -1,15 +1,15 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useCallback } from "react";
 import {
   View,
   Text,
   ScrollView,
- TouchableOpacity,
+  TouchableOpacity,
   TextInput,
   Image,
   Alert,
 } from "react-native";
-import { useRouter } from "expo-router";
-import { GeneratedPlan, usePlan } from "@/context/PlanContext";
+import { useRouter, useFocusEffect } from "expo-router";
+import { usePlan } from "@/context/PlanContext";
 import { interestGroups } from "@/constants/interestData";
 import { activityGroups } from "@/constants/activityData";
 import { Ionicons } from "@expo/vector-icons";
@@ -17,6 +17,7 @@ import axios from "axios";
 import Constants from "expo-constants";
 import dayjs from "dayjs";
 import "dayjs/locale/th";
+
 dayjs.locale("th");
 
 export default function SummaryPage() {
@@ -35,11 +36,22 @@ export default function SummaryPage() {
     }
   }, [plan]);
 
+  useFocusEffect(
+    useCallback(() => {
+      setLoading(false);
+      return () => {};
+    }, [])
+  );
+
   const createPlan = async () => {
+    if (loading) return;
+
     try {
       setLoading(true);
+      setPlans([]);
 
       const API_URL = Constants.expoConfig?.extra?.API_URL;
+
       const res = await axios.post<any>(`${API_URL}/api/plan/generate/start`, {
         province_id: plan.province,
         province_name: plan.provinceName,
@@ -56,17 +68,22 @@ export default function SummaryPage() {
         num_plans: Math.max(1, Math.min(3, numPlans)),
       });
 
+      const jobId = res?.data?.job_id;
+      if (!jobId) {
+        throw new Error("ไม่พบ job_id");
+      }
+
       router.push({
         pathname: "/plan/(preview)/loading",
         params: {
-          jobId: res.data.job_id,
+          jobId,
           previewImage: plan.image || "",
         },
       });
     } catch (error) {
       console.error("Error generating plans:", error);
-      Alert.alert("เกิดข้อผิดพลาด", "ไม่สามารถเริ่มสร้างแผนการเดินทางได้");
       setLoading(false);
+      Alert.alert("เกิดข้อผิดพลาด", "ไม่สามารถเริ่มสร้างแผนการเดินทางได้");
     }
   };
 
@@ -131,72 +148,72 @@ export default function SummaryPage() {
         <TouchableOpacity onPress={() => router.back()} disabled={loading}>
           <Ionicons name="chevron-back" size={24} color="#000" />
         </TouchableOpacity>
-        <Text className="text-xl font-semibold ml-4">
+        <Text className="ml-4 text-xl font-semibold">
           สรุปข้อมูลแผนการเดินทาง
         </Text>
       </View>
 
       <ScrollView contentContainerStyle={{ paddingBottom: 140 }} className="px-4">
         <View className="px-2">
-          <View className="rounded-2xl border border-gray-200 p-4 space-y-6 bg-white">
-            <View className="flex-row items-center mb-2">
+          <View className="rounded-2xl border border-gray-200 bg-white p-4 space-y-6">
+            <View className="mb-2 flex-row items-center">
               <Ionicons name="compass-outline" size={24} />
-              <Text className="ml-2 font-semibold text-lg">ชื่อแผนการเดินทาง</Text>
+              <Text className="ml-2 text-lg font-semibold">ชื่อแผนการเดินทาง</Text>
             </View>
             <TextInput
               value={planName}
               onChangeText={setPlanName}
               placeholder="ตั้งชื่อแผนของคุณ"
               editable={!loading}
-              className="border border-gray-300 rounded-xl p-3 font-sans ml-8"
+              className="ml-8 rounded-xl border border-gray-300 p-3 font-sans"
             />
           </View>
 
-          <View className="rounded-2xl border border-gray-200 p-4 space-y-6 bg-white mt-4">
+          <View className="mt-4 rounded-2xl border border-gray-200 bg-white p-4 space-y-6">
             <View>
-              <View className="flex-row items-center mb-2">
+              <View className="mb-2 flex-row items-center">
                 <Ionicons name="location-outline" size={24} />
-                <Text className="ml-2 font-semibold text-lg">จุดหมายปลายทาง</Text>
+                <Text className="ml-2 text-lg font-semibold">จุดหมายปลายทาง</Text>
               </View>
               <View className="flex-row items-center space-x-3">
                 <Image
                   source={{ uri: plan.image }}
-                  className="w-32 h-20 rounded-xl ml-8 bg-gray-200"
+                  className="ml-8 h-20 w-32 rounded-xl bg-gray-200"
                 />
-                <Text className="font-semibold ml-6">
+                <Text className="ml-6 font-semibold">
                   จังหวัด {plan.provinceName || "-"}
                 </Text>
               </View>
             </View>
 
             <View className="mt-6">
-              <View className="flex-row items-center mb-1">
+              <View className="mb-1 flex-row items-center">
                 <Ionicons name="people-outline" size={24} />
-                <Text className="ml-2 font-semibold text-lg">ผู้ร่วมเดินทาง</Text>
+                <Text className="ml-2 text-lg font-semibold">ผู้ร่วมเดินทาง</Text>
               </View>
               <Text className="ml-9 font-sans">{renderGroupDetail()}</Text>
             </View>
 
             <View className="mt-6">
-              <View className="flex-row items-center mb-1">
+              <View className="mb-1 flex-row items-center">
                 <Ionicons name="calendar-outline" size={24} />
-                <Text className="ml-2 font-semibold text-lg">วันที่เดินทาง</Text>
+                <Text className="ml-2 text-lg font-semibold">วันที่เดินทาง</Text>
               </View>
-              <Text className="font-sans ml-9">{formatDateRange()}</Text>
+              <Text className="ml-9 font-sans">{formatDateRange()}</Text>
             </View>
 
             <View className="mt-6">
-              <View className="flex-row items-center mb-2">
+              <View className="mb-2 flex-row items-center">
                 <Ionicons name="star-outline" size={24} />
-                <Text className="ml-2 font-semibold text-lg">
+                <Text className="ml-2 text-lg font-semibold">
                   ความสนใจ {interestLabels.length} อย่าง
                 </Text>
               </View>
-              <View className="flex-row flex-wrap gap-2 ml-9">
+              <View className="ml-9 flex-row flex-wrap gap-2">
                 {interestLabels.map((label, idx) => (
                   <View
                     key={idx}
-                    className="px-3 py-1 rounded-full bg-white border border-gray-300"
+                    className="rounded-full border border-gray-300 bg-white px-3 py-1"
                   >
                     <Text className="text-sm font-sans">{label}</Text>
                   </View>
@@ -205,17 +222,17 @@ export default function SummaryPage() {
             </View>
 
             <View className="mt-6">
-              <View className="flex-row items-center mb-2">
+              <View className="mb-2 flex-row items-center">
                 <Ionicons name="bicycle-outline" size={24} />
-                <Text className="ml-2 font-semibold text-lg">
+                <Text className="ml-2 text-lg font-semibold">
                   กิจกรรมที่เลือก {activityLabels.length} อย่าง
                 </Text>
               </View>
-              <View className="flex-row flex-wrap gap-2 ml-9">
+              <View className="ml-9 flex-row flex-wrap gap-2">
                 {activityLabels.map((label, idx) => (
                   <View
                     key={idx}
-                    className="px-3 py-1 rounded-full bg-white border border-gray-300"
+                    className="rounded-full border border-gray-300 bg-white px-3 py-1"
                   >
                     <Text className="text-sm font-sans">{label}</Text>
                   </View>
@@ -224,11 +241,11 @@ export default function SummaryPage() {
             </View>
 
             <View className="mt-6">
-              <View className="flex-row items-center mb-1">
+              <View className="mb-1 flex-row items-center">
                 <Ionicons name="cash-outline" size={24} />
-                <Text className="ml-2 font-semibold text-lg">งบประมาณการเดินทาง</Text>
+                <Text className="ml-2 text-lg font-semibold">งบประมาณการเดินทาง</Text>
               </View>
-              <Text className="font-sans ml-9">
+              <Text className="ml-9 font-sans">
                 {plan.budgetType || "-"}
                 {plan.budgetAmount && plan.budgetAmount > 0
                   ? ` งบประมาณ ${plan.budgetAmount.toLocaleString()} บาท`
@@ -239,7 +256,7 @@ export default function SummaryPage() {
         </View>
 
         <View className="mt-8">
-          <View className="flex-row items-center justify-center mb-4 space-x-2">
+          <View className="mb-4 flex-row items-center justify-center space-x-2">
             <Ionicons name="map-outline" size={24} color="#000" />
             <Text className="ml-2 text-lg font-semibold text-black">
               จำนวนแผนที่ต้องการสร้าง
@@ -252,7 +269,7 @@ export default function SummaryPage() {
               activeOpacity={0.7}
               disabled={loading}
             >
-              <View className="w-10 h-10 rounded-full border border-gray-300 items-center justify-center">
+              <View className="h-10 w-10 items-center justify-center rounded-full border border-gray-300">
                 <Ionicons
                   name="remove"
                   size={22}
@@ -270,7 +287,7 @@ export default function SummaryPage() {
               activeOpacity={0.7}
               disabled={loading}
             >
-              <View className="w-10 h-10 rounded-full border border-gray-300 items-center justify-center">
+              <View className="h-10 w-10 items-center justify-center rounded-full border border-gray-300">
                 <Ionicons
                   name="add"
                   size={22}
@@ -280,27 +297,24 @@ export default function SummaryPage() {
             </TouchableOpacity>
           </View>
 
-          <Text className="text-center text-red-500 font-sans mt-3">
+          <Text className="mt-3 text-center font-sans text-red-500">
             คุณสามารถสร้างแผนได้สูงสุด 3 แผน
           </Text>
         </View>
       </ScrollView>
 
-      <View className="absolute bottom-0 inset-x-0 px-4 py-4 bg-white border-t border-gray-100">
+      <View className="absolute inset-x-0 bottom-0 border-t border-gray-100 bg-white px-4 py-4">
         <TouchableOpacity
           onPress={createPlan}
           disabled={loading}
-          className={`py-4 rounded-xl items-center ${loading ? "bg-orange-300" : "bg-orange-500"}`}
+          activeOpacity={0.85}
+          className={`items-center rounded-xl py-4 ${
+            loading ? "bg-orange-300" : "bg-orange-500"
+          }`}
         >
-          {loading ? (
-            <Text className="text-white text-lg font-semibold font-sans">
-              กำลังสร้างแผน...
-            </Text>
-          ) : (
-            <Text className="text-white text-lg font-semibold font-sans">
-              สร้างแผนการเดินทางของฉัน
-            </Text>
-          )}
+          <Text className="font-sans text-lg font-semibold text-white">
+            {loading ? "กำลังสร้างแผน..." : "สร้างแผนการเดินทางของฉัน"}
+          </Text>
         </TouchableOpacity>
       </View>
     </View>

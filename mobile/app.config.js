@@ -5,6 +5,7 @@ export default {
     name: "mobile",
     slug: "mobile",
     version: "1.0.0",
+    icon: "./assets/icons/icon-app.png",
     extra: {
       eas: {
         projectId: "ac3814e6-0d11-4a07-87dd-1d5492a916d9"
@@ -29,7 +30,8 @@ export default {
     android: {
       package: "com.wongwiwat.justgo",
       adaptiveIcon: {
-        backgroundColor: "#E6F4FE",
+        foregroundImage: "./assets/icons/icon-app.png",
+        backgroundColor: "#E6F4FE"
       },
       edgeToEdgeEnabled: true,
       predictiveBackGestureEnabled: false,
@@ -40,6 +42,18 @@ export default {
     },
     plugins: [
       "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          image: "./assets/icons/init-app.png",
+          imageWidth: 220,
+          resizeMode: "contain",
+          backgroundColor: "#ffffff",
+          dark: {
+            backgroundColor: "#ffffff"
+          }
+        }
+      ],
       "expo-font"
     ],
     experiments: {

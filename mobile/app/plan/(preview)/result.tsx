@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from "react";
-import { View, Text, ScrollView, ActivityIndicator, Alert } from "react-native";
+import React from "react";
+import { View, Text, ScrollView } from "react-native";
 import { useRouter } from "expo-router";
 import { usePlan } from "@/context/PlanContext";
 import PlanCard from "@/components/plan/PlanCard";
@@ -10,8 +10,10 @@ export default function ResultPage() {
 
   if (!plans || plans.length === 0) {
     return (
-      <View className="flex-1 justify-center items-center bg-white">
-        <Text className="text-lg font-sans text-gray-500">ไม่พบแผนการเดินทาง</Text>
+      <View className="flex-1 items-center justify-center bg-white">
+        <Text className="text-lg font-sans text-gray-500">
+          ไม่พบแผนการเดินทาง
+        </Text>
       </View>
     );
   }
@@ -23,9 +25,7 @@ export default function ResultPage() {
           key={index}
           plan={planItem}
           index={index}
-          onPress={() =>
-            router.push(`/plan/(preview)/detail/${index}`)
-          }
+          onPress={() => router.push(`/plan/(preview)/detail/${index}`)}
         />
       ))}
     </ScrollView>

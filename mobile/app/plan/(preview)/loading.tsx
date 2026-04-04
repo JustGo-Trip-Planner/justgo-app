@@ -1,7 +1,7 @@
+import React, { useEffect, useRef, useState, useCallback } from "react";
 import { View, Text, TouchableOpacity, Animated, Easing } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { useEffect, useRef, useState } from "react";
 import axios from "axios";
 import Constants from "expo-constants";
 import { LinearGradient } from "expo-linear-gradient";
@@ -53,9 +53,25 @@ export default function LoadingPage() {
   const progressAnim = useRef(new Animated.Value(0)).current;
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const floatAnim = useRef(new Animated.Value(0)).current;
-  const rotateAnim = useRef(new Animated.Value(0)).current;
   const shimmerAnim = useRef(new Animated.Value(-120)).current;
   const orbAnim = useRef(new Animated.Value(0)).current;
+
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const stoppedRef = useRef(false);
+
+  const stopPolling = useCallback(() => {
+    stoppedRef.current = true;
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+  }, []);
+
+  const handleBackToSummary = useCallback(() => {
+    stopPolling();
+    setPlans([]);
+    router.back();
+  }, [router, setPlans, stopPolling]);
 
   useEffect(() => {
     Animated.timing(progressAnim, {
@@ -103,15 +119,6 @@ export default function LoadingPage() {
       ])
     );
 
-    const rotateLoop = Animated.loop(
-      Animated.timing(rotateAnim, {
-        toValue: 1,
-        duration: 3500,
-        easing: Easing.linear,
-        useNativeDriver: true,
-      })
-    );
-
     const shimmerLoop = Animated.loop(
       Animated.timing(shimmerAnim, {
         toValue: 320,
@@ -140,20 +147,20 @@ export default function LoadingPage() {
 
     pulseLoop.start();
     floatLoop.start();
-    rotateLoop.start();
     shimmerLoop.start();
     orbLoop.start();
 
     return () => {
       pulseLoop.stop();
       floatLoop.stop();
-      rotateLoop.stop();
       shimmerLoop.stop();
       orbLoop.stop();
     };
-  }, [error, pulseAnim, floatAnim, rotateAnim, shimmerAnim, orbAnim]);
+  }, [error, pulseAnim, floatAnim, shimmerAnim, orbAnim]);
 
   useEffect(() => {
+    stoppedRef.current = false;
+
     if (!jobId) {
       setError("ไม่พบรหัสงานสำหรับติดตามสถานะการสร้างแผน");
       setStep("failed");
@@ -163,15 +170,16 @@ export default function LoadingPage() {
     }
 
     let mounted = true;
-    let timeoutId: ReturnType<typeof setTimeout> | null = null;
 
     const poll = async () => {
+      if (!mounted || stoppedRef.current) return;
+
       try {
         const res = await axios.get<JobStatus>(
           `${API_URL}/api/plan/generate/status/${jobId}`
         );
 
-        if (!mounted) return;
+        if (!mounted || stoppedRef.current) return;
 
         const data = res.data;
         const nextProgress = clampProgress(data.progress);
@@ -184,6 +192,8 @@ export default function LoadingPage() {
         setMessage(nextMessage);
 
         if (data.status === "completed" && data.result?.plans) {
+          stopPolling();
+
           const plansFromApi = Array.isArray(data.result.plans)
             ? data.result.plans
             : [];
@@ -199,17 +209,19 @@ export default function LoadingPage() {
         }
 
         if (data.status === "failed") {
-          setError(data.error || "เกิดข้อผิดพลาดในการสร้างแผน");
+          stopPolling();
+          setError(data.error || "ระบบไม่สามารถสร้างแผนได้ กรุณาลองใหม่อีกครั้ง");
           setStep("failed");
-          setMessage("ระบบไม่สามารถสร้างแผนได้ กรุณาลองใหม่อีกครั้ง");
+          setMessage("สร้างแผนไม่สำเร็จ");
           setProgress(100);
           return;
         }
 
-        timeoutId = setTimeout(poll, 1200);
+        timeoutRef.current = setTimeout(poll, 1200);
       } catch (e: any) {
-        if (!mounted) return;
+        if (!mounted || stoppedRef.current) return;
 
+        stopPolling();
         setError(
           e?.response?.data?.message ||
             e?.response?.data?.detail ||
@@ -226,18 +238,13 @@ export default function LoadingPage() {
 
     return () => {
       mounted = false;
-      if (timeoutId) clearTimeout(timeoutId);
+      stopPolling();
     };
-  }, [jobId, API_URL, previewImage, router, setPlans]);
+  }, [jobId, API_URL, previewImage, router, setPlans, stopPolling]);
 
   const progressWidth = progressAnim.interpolate({
     inputRange: [0, 100],
     outputRange: ["0%", "100%"],
-  });
-
-  const rotate = rotateAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: ["0deg", "360deg"],
   });
 
   const orbTranslateY = orbAnim.interpolate({
@@ -256,7 +263,11 @@ export default function LoadingPage() {
   return (
     <View className="flex-1 overflow-hidden bg-white">
       <LinearGradient
-        colors={error ? ["#fff7f7", "#ffffff", "#fff5f5"] : ["#fff7ed", "#ffffff", "#f8fafc"]}
+        colors={
+          error
+            ? ["#fff7f7", "#ffffff", "#fff5f5"]
+            : ["#fff7ed", "#ffffff", "#f8fafc"]
+        }
         className="absolute inset-0"
       />
 
@@ -292,7 +303,9 @@ export default function LoadingPage() {
               }`}
             >
               <LinearGradient
-                colors={error ? ["#fee2e2", "#ffffff"] : ["#fff7ed", "#ffffff"]}
+                colors={
+                  error ? ["#fee2e2", "#ffffff"] : ["#fff7ed", "#ffffff"]
+                }
                 className="rounded-full"
               />
               <Ionicons
@@ -309,7 +322,7 @@ export default function LoadingPage() {
 
           <Text className="mt-3 px-6 text-center text-sm font-sans leading-6 text-gray-500">
             {error
-              ? "เกิดปัญหาระหว่างประมวลผล คุณสามารถย้อนกลับไปลองใหม่อีกครั้ง"
+              ? error
               : "ระบบกำลังวิเคราะห์จังหวัด ความสนใจ กิจกรรม และงบประมาณ"}
           </Text>
         </View>
@@ -350,7 +363,7 @@ export default function LoadingPage() {
 
         {error && (
           <TouchableOpacity
-            onPress={() => router.back()}
+            onPress={handleBackToSummary}
             activeOpacity={0.9}
             className="mt-6 overflow-hidden rounded-2xl"
           >

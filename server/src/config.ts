@@ -16,9 +16,9 @@ interface Config {
 
 const config: Config = {
   port: Number(process.env.PORT) || 3000,
-  RAG_URL: process.env.RAG_URL || "http://localhost:8000",
-  MONGO_URI: process.env.MONGO_URI || "mongodb://localhost:27017/justgo-db",
-  JWT_SECRET: process.env.JWT_SECRET || "fallbackkey",
+  RAG_URL: process.env.RAG_URL || "",
+  MONGO_URI: process.env.MONGO_URI || "",
+  JWT_SECRET: process.env.JWT_SECRET || "",
 
   CLOUDINARY_CLOUD_NAME: process.env.CLOUDINARY_CLOUD_NAME || "",
   CLOUDINARY_API_KEY: process.env.CLOUDINARY_API_KEY || "",

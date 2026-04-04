@@ -15,13 +15,14 @@ import hotelRoutes from "./routes/hotelRoutes";
 import voteRoutes from "./routes/voteRoutes";
 
 const app = express();
+
 app.use(cors());
 app.use(express.json());
 
 mongoose
   .connect(config.MONGO_URI)
   .then(() => console.log("MongoDB connected"))
-  .catch((err) => console.error("Mongo connection error:", err));
+  .catch((err) => console.error("❌ Mongo connection error:", err));
 
 app.use("/api/uploads", uploadRoutes);
 app.use("/api/auth", authRoutes);
@@ -33,11 +34,17 @@ app.use("/api/provinces", provinceRoutes);
 app.use("/api/plan", planRoutes);
 app.use("/api/notifications", notificationRoutes);
 
-app.get("/api/test", (req, res) => {
-  res.send("✅ Mock API is working!");
+app.get("/", (_req, res) => {
+  res.send("Backend Running");
 });
 
-app.listen(config.port, () => {
-  console.log(`Backend listening on http://localhost:${config.port}`);
+app.get("/health", (_req, res) => {
+  res.json({ ok: true });
+});
+
+const PORT = process.env.PORT || config.port;
+
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
   startCronJobs();
 });

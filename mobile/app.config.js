@@ -2,7 +2,7 @@ import "dotenv/config";
 
 export default {
   expo: {
-    name: "mobile",
+    name: "JustGo",
     slug: "mobile",
     version: "1.0.0",
     icon: "./assets/icons/icon-app.png",

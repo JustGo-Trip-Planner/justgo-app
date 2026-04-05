@@ -10,8 +10,8 @@ export default {
       eas: {
         projectId: "ac3814e6-0d11-4a07-87dd-1d5492a916d9"
       },
-      API_URL: process.env.API_URL,
-      GOOGLE_MAPS_API_KEY: process.env.GOOGLE_MAPS_API_KEY,
+      API_URL: process.env.EXPO_PUBLIC_API_URL,
+      GOOGLE_MAPS_API_KEY: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY,
     },
     orientation: "portrait",
     scheme: "mobile",
